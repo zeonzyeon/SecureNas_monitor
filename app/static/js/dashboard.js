@@ -1,24 +1,21 @@
-// 대시보드 상태와 최근 파일 이벤트를 API에서 가져와 화면에 표시
+// 대시보드 상태와 최근 파일 생성/삭제 이벤트를 API에서 가져와 화면에 표시
 const eventLabels = {
   created: "생성",
-  modified: "수정",
   deleted: "삭제",
-  moved: "이동",
 };
 
 const elements = {
   apiState: document.querySelector("#apiState"),
+  createdEvents: document.querySelector("#createdEvents"),
   databasePath: document.querySelector("#databasePath"),
   deletedEvents: document.querySelector("#deletedEvents"),
   emptyState: document.querySelector("#emptyState"),
   eventsTable: document.querySelector("#eventsTable"),
   limitSelect: document.querySelector("#limitSelect"),
-  modifiedEvents: document.querySelector("#modifiedEvents"),
   monitorConfigured: document.querySelector("#monitorConfigured"),
   monitorDot: document.querySelector("#monitorDot"),
   monitorPathState: document.querySelector("#monitorPathState"),
   monitorState: document.querySelector("#monitorState"),
-  movedEvents: document.querySelector("#movedEvents"),
   refreshButton: document.querySelector("#refreshButton"),
   totalEvents: document.querySelector("#totalEvents"),
 };
@@ -41,22 +38,32 @@ function formatDate(value) {
   }).format(date);
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function updateSummary(events) {
   elements.totalEvents.textContent = events.length;
-  elements.modifiedEvents.textContent = events.filter((event) => event.event_type === "modified").length;
+  elements.createdEvents.textContent = events.filter((event) => event.event_type === "created").length;
   elements.deletedEvents.textContent = events.filter((event) => event.event_type === "deleted").length;
-  elements.movedEvents.textContent = events.filter((event) => event.event_type === "moved").length;
 }
 
 function renderEvents(events) {
   elements.eventsTable.innerHTML = events
     .map((event) => {
       const label = eventLabels[event.event_type] || event.event_type;
+      const fileName = escapeHtml(event.file_name || "-");
+      const filePath = escapeHtml(event.file_path || "-");
       return `
         <tr>
           <td><span class="badge ${event.event_type}">${label}</span></td>
-          <td>${event.file_name || "-"}</td>
-          <td>${event.file_path || "-"}</td>
+          <td><span class="truncate" title="${fileName}">${fileName}</span></td>
+          <td><span class="truncate" title="${filePath}">${filePath}</span></td>
           <td>${formatDate(event.created_at)}</td>
         </tr>
       `;

@@ -166,6 +166,10 @@ h1 {
   margin-bottom: 18px;
 }
 
+.summary-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .metric,
 .panel {
   background: var(--surface);
@@ -263,18 +267,26 @@ td:nth-child(1) {
 }
 
 td:nth-child(2) {
-  width: 180px;
+  width: 240px;
   font-weight: 700;
 }
 
 td:nth-child(3) {
   color: var(--muted);
-  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 td:nth-child(4) {
   width: 170px;
   color: var(--muted);
+}
+
+.truncate {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .badge {
@@ -294,12 +306,7 @@ td:nth-child(4) {
   color: var(--danger);
 }
 
-.badge.modified {
-  background: #fff4d6;
-  color: var(--warning);
-}
-
-.badge.moved {
+.badge.created {
   background: #dff7f3;
   color: var(--accent-strong);
 }

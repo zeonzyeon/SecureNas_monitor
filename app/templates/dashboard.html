@@ -1,5 +1,5 @@
-<!-- NAS 파일 접근 이벤트를 보여주는 관리자 대시보드 화면 -->
 <!doctype html>
+<!-- NAS 파일 생성/삭제 이벤트를 보여주는 관리자 대시보드 화면 -->
 <html lang="ko">
   <head>
     <meta charset="utf-8">
@@ -46,22 +46,18 @@
         </div>
       </header>
 
-      <section class="summary-grid" aria-label="Event summary">
+      <section class="summary-grid compact" aria-label="Event summary">
         <article class="metric">
           <span>전체 이벤트</span>
           <strong id="totalEvents">0</strong>
         </article>
         <article class="metric">
-          <span>수정</span>
-          <strong id="modifiedEvents">0</strong>
+          <span>생성</span>
+          <strong id="createdEvents">0</strong>
         </article>
         <article class="metric">
           <span>삭제</span>
           <strong id="deletedEvents">0</strong>
-        </article>
-        <article class="metric">
-          <span>이동</span>
-          <strong id="movedEvents">0</strong>
         </article>
       </section>
 
@@ -69,8 +65,8 @@
         <section class="panel events-panel">
           <div class="panel-header">
             <div>
-              <h2>최근 파일 접근 이벤트</h2>
-              <p>watchdog에서 기록한 파일 생성, 수정, 삭제, 이동 이벤트</p>
+              <h2>최근 파일 이벤트</h2>
+              <p>NAS 공유 폴더에서 감지된 파일 생성/삭제 로그</p>
             </div>
             <select id="limitSelect" aria-label="조회 개수">
               <option value="50">최근 50개</option>
@@ -95,7 +91,7 @@
 
           <div class="empty-state" id="emptyState">
             <strong>아직 기록된 이벤트가 없습니다.</strong>
-            <span>NAS 공유 폴더가 연결되면 파일 이벤트가 이곳에 표시됩니다.</span>
+            <span>NAS 공유 폴더에서 파일을 생성하거나 삭제하면 이곳에 표시됩니다.</span>
           </div>
         </section>
 
