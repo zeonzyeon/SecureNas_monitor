@@ -14,7 +14,13 @@ def start_monitor(app):
         return None
 
     path = Path(monitor_path)
-    if not path.exists():
+    try:
+        path_exists = path.exists()
+    except PermissionError:
+        app.logger.warning("NAS_MONITOR_PATH access denied: %s", path)
+        return None
+
+    if not path_exists:
         app.logger.warning("NAS_MONITOR_PATH does not exist: %s", path)
         return None
 
@@ -22,7 +28,14 @@ def start_monitor(app):
     observer = Observer()
     observer.schedule(event_handler, str(path), recursive=True)
     observer.daemon = True
-    observer.start()
+    try:
+        observer.start()
+    except TypeError as error:
+        app.logger.error("Failed to start file monitor. Try upgrading watchdog: %s", error)
+        return None
+    except Exception as error:
+        app.logger.error("Failed to start file monitor: %s", error)
+        return None
 
     app.logger.info("Started NAS file monitor: %s", path)
     return observer
