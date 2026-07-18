@@ -47,6 +47,41 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getFileKind(event) {
+  if (event.is_directory) {
+    return { label: "폴더", className: "folder" };
+  }
+
+  const fileName = String(event.file_name || "").toLowerCase();
+  const extension = fileName.includes(".") ? fileName.split(".").pop() : "";
+
+  if (["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"].includes(extension)) {
+    return { label: "이미지", className: "image" };
+  }
+
+  if (["txt", "md", "log", "csv"].includes(extension)) {
+    return { label: "텍스트", className: "text" };
+  }
+
+  if (["pdf"].includes(extension)) {
+    return { label: "PDF", className: "pdf" };
+  }
+
+  if (["doc", "docx", "hwp", "hwpx"].includes(extension)) {
+    return { label: "문서", className: "document" };
+  }
+
+  if (["xls", "xlsx"].includes(extension)) {
+    return { label: "시트", className: "sheet" };
+  }
+
+  if (["mp4", "mov", "avi", "mkv", "mp3", "wav", "flac"].includes(extension)) {
+    return { label: "미디어", className: "media" };
+  }
+
+  return { label: "파일", className: "file" };
+}
+
 function updateSummary(events) {
   elements.totalEvents.textContent = events.length;
   elements.createdEvents.textContent = events.filter((event) => event.event_type === "created").length;
@@ -57,12 +92,18 @@ function renderEvents(events) {
   elements.eventsTable.innerHTML = events
     .map((event) => {
       const label = eventLabels[event.event_type] || event.event_type;
+      const kind = getFileKind(event);
       const fileName = escapeHtml(event.file_name || "-");
       const filePath = escapeHtml(event.file_path || "-");
       return `
         <tr>
           <td><span class="badge ${event.event_type}">${label}</span></td>
-          <td><span class="truncate" title="${fileName}">${fileName}</span></td>
+          <td>
+            <span class="file-cell">
+              <span class="kind-badge ${kind.className}">${kind.label}</span>
+              <span class="truncate" title="${fileName}">${fileName}</span>
+            </span>
+          </td>
           <td><span class="truncate" title="${filePath}">${filePath}</span></td>
           <td>${formatDate(event.created_at)}</td>
         </tr>
