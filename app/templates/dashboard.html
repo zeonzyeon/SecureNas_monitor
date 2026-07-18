@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureNas Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body>
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SN</div>
+        <div>
+          <p class="brand-name">SecureNas</p>
+          <p class="brand-subtitle">Access Monitor</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" href="/">Dashboard</a>
+        <a class="nav-item disabled" href="#" aria-disabled="true">Users</a>
+        <a class="nav-item disabled" href="#" aria-disabled="true">Blocked IPs</a>
+        <a class="nav-item disabled" href="#" aria-disabled="true">Settings</a>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-dot" id="monitorDot"></span>
+        <div>
+          <p id="monitorState">확인 중</p>
+          <span id="monitorPathState">NAS 경로 상태 조회 중</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NAS Security Monitoring</p>
+          <h1>관리자 대시보드</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" id="refreshButton" title="새로고침" aria-label="새로고침">
+            ↻
+          </button>
+        </div>
+      </header>
+
+      <section class="summary-grid" aria-label="Event summary">
+        <article class="metric">
+          <span>전체 이벤트</span>
+          <strong id="totalEvents">0</strong>
+        </article>
+        <article class="metric">
+          <span>수정</span>
+          <strong id="modifiedEvents">0</strong>
+        </article>
+        <article class="metric">
+          <span>삭제</span>
+          <strong id="deletedEvents">0</strong>
+        </article>
+        <article class="metric">
+          <span>이동</span>
+          <strong id="movedEvents">0</strong>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <section class="panel events-panel">
+          <div class="panel-header">
+            <div>
+              <h2>최근 파일 접근 이벤트</h2>
+              <p>watchdog에서 기록한 파일 생성, 수정, 삭제, 이동 이벤트</p>
+            </div>
+            <select id="limitSelect" aria-label="조회 개수">
+              <option value="50">최근 50개</option>
+              <option value="100" selected>최근 100개</option>
+              <option value="200">최근 200개</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>유형</th>
+                  <th>파일명</th>
+                  <th>경로</th>
+                  <th>시각</th>
+                </tr>
+              </thead>
+              <tbody id="eventsTable"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" id="emptyState">
+            <strong>아직 기록된 이벤트가 없습니다.</strong>
+            <span>NAS 공유 폴더가 연결되면 파일 이벤트가 이곳에 표시됩니다.</span>
+          </div>
+        </section>
+
+        <aside class="panel side-panel">
+          <h2>운영 상태</h2>
+          <dl>
+            <div>
+              <dt>API</dt>
+              <dd id="apiState">확인 중</dd>
+            </div>
+            <div>
+              <dt>DB</dt>
+              <dd id="databasePath">확인 중</dd>
+            </div>
+            <div>
+              <dt>감시 경로</dt>
+              <dd id="monitorConfigured">확인 중</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>
