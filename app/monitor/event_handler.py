@@ -14,6 +14,7 @@ class AccessEventHandler(FileSystemEventHandler):
         self.pending_directory_creates = {}
         self.dedupe_seconds = 5.0
         self.directory_create_delay = 1.5
+        self.default_directory_create_delay = 5.0
 
     def on_created(self, event):
         if self._is_temporary_smb_path(event.src_path):
@@ -35,17 +36,31 @@ class AccessEventHandler(FileSystemEventHandler):
         self._record("deleted", event.src_path, event.is_directory)
 
     def on_moved(self, event):
-        if event.is_directory:
-            self._cancel_pending_directory_create(event.src_path)
+        was_pending_directory = self._cancel_pending_directory_create(event.src_path)
 
-            if not self._is_temporary_smb_path(event.dest_path):
-                self._schedule_directory_create(event.dest_path)
+        if self._is_temporary_smb_path(event.dest_path):
+            return
+
+        if (
+            event.is_directory
+            and (
+                was_pending_directory
+                or self._is_temporary_smb_path(event.src_path)
+                or self._is_default_new_directory_path(event.src_path)
+            )
+        ):
+            self._schedule_directory_create(event.dest_path)
 
     def _schedule_directory_create(self, directory_path):
         self._cancel_pending_directory_create(directory_path)
 
+        delay = (
+            self.default_directory_create_delay
+            if self._is_default_new_directory_path(directory_path)
+            else self.directory_create_delay
+        )
         timer = threading.Timer(
-            self.directory_create_delay,
+            delay,
             self._record,
             args=("created", directory_path, True),
         )
@@ -58,6 +73,9 @@ class AccessEventHandler(FileSystemEventHandler):
 
         if timer:
             timer.cancel()
+            return True
+
+        return False
 
     def _record(self, event_type, file_path, is_directory):
         self.pending_directory_creates.pop(file_path, None)
@@ -88,3 +106,7 @@ class AccessEventHandler(FileSystemEventHandler):
 
     def _is_temporary_smb_path(self, file_path):
         return ":TMPNAME:" in str(file_path)
+
+    def _is_default_new_directory_path(self, file_path):
+        directory_name = str(file_path).rstrip("\\/").split("\\")[-1].split("/")[-1]
+        return directory_name == "새 폴더" or directory_name.startswith("새 폴더 (")
