@@ -1,3 +1,4 @@
+// 대시보드 상태와 최근 파일 이벤트를 API에서 가져와 화면에 표시
 const eventLabels = {
   created: "생성",
   modified: "수정",

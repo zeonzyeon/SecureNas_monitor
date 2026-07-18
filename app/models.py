@@ -1,8 +1,10 @@
+﻿# 파일 접근 이벤트를 SQLite에 저장하고 조회하는 데이터 접근 함수
 from pathlib import Path
 
 from app.db import get_db
 
 
+# 파일 이벤트 정보 저장
 def create_file_event(event_type, file_path, is_directory=False, src_path=None, dest_path=None):
     path = Path(file_path)
     db = get_db()
@@ -31,6 +33,7 @@ def create_file_event(event_type, file_path, is_directory=False, src_path=None, 
     return cursor.lastrowid
 
 
+# 저장된 파일 이벤트 최신순으로 조회
 def list_file_events(limit=100):
     db = get_db()
     rows = db.execute(

@@ -1,3 +1,4 @@
+﻿# watchdog 파일 시스템 이벤트를 받아 SQLite 이벤트 기록으로 변환
 from watchdog.events import FileSystemEventHandler
 
 from app.models import create_file_event

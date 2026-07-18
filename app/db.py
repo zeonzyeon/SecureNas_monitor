@@ -1,3 +1,4 @@
+﻿# SQLite 연결을 관리하고 파일 이벤트 저장 테이블을 초기화
 import sqlite3
 from pathlib import Path
 

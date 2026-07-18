@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 from app import create_app
 from app.monitor.watcher import start_monitor

@@ -1,3 +1,4 @@
+﻿# 환경변수에 설정된 NAS 공유 폴더를 watchdog으로 감시
 from pathlib import Path
 
 from watchdog.observers import Observer

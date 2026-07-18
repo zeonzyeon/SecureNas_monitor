@@ -1,3 +1,4 @@
+﻿# .env 값을 읽어 Flask, SQLite, NAS 감시 경로 설정을 관리
 import os
 from pathlib import Path
 

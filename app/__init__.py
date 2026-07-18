@@ -1,3 +1,4 @@
+﻿# Flask 애플리케이션을 생성하고 초기 설정을 수행하는 파일
 from flask import Flask
 
 from app.config import Config
