@@ -1,9 +1,8 @@
 ﻿# 환경변수에 설정된 NAS 공유 폴더를 watchdog으로 감시
-from pathlib import Path
-
 from watchdog.observers import Observer
 
 from app.monitor.event_handler import AccessEventHandler
+from app.nas_paths import NasPathConfigError, resolve_nas_root
 
 
 def start_monitor(app):
@@ -13,7 +12,15 @@ def start_monitor(app):
         app.logger.warning("NAS_MONITOR_PATH is not configured. File monitoring is disabled.")
         return None
 
-    path = Path(monitor_path)
+    try:
+        path = resolve_nas_root(
+            monitor_path,
+            allow_mapped_drive=app.config.get("NAS_ALLOW_MAPPED_DRIVE", False),
+        )
+    except NasPathConfigError as error:
+        app.logger.error("Invalid NAS_MONITOR_PATH: %s", error)
+        return None
+
     try:
         path_exists = path.exists()
     except PermissionError:

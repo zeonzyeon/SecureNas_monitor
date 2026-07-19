@@ -20,7 +20,7 @@
         <a class="nav-item active" href="/">Dashboard</a>
         <a class="nav-item" href="#usersPanel">Users</a>
         <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
-        <a class="nav-item disabled" href="#" aria-disabled="true">Blocked IPs</a>
+        <a class="nav-item" href="#ipBlocksPanel">Blocked IPs</a>
         <a class="nav-item disabled" href="#" aria-disabled="true">Settings</a>
       </nav>
 
@@ -64,6 +64,10 @@
         <article class="metric">
           <span>승인 대기</span>
           <strong id="pendingUsers">0</strong>
+        </article>
+        <article class="metric">
+          <span>차단 IP</span>
+          <strong id="blockedIps">0</strong>
         </article>
       </section>
 
@@ -161,6 +165,95 @@
             </div>
           </dl>
         </aside>
+      </section>
+
+      <section class="panel ip-blocks-panel" id="ipBlocksPanel">
+        <div class="panel-header">
+          <div>
+            <h2>IP 차단 관리</h2>
+            <p>로그인 실패로 차단된 IP와 수동 차단 상태를 관리합니다.</p>
+          </div>
+          <span class="save-state" id="ipBlockSaveState" aria-live="polite"></span>
+        </div>
+
+        <form class="inline-form" id="manualBlockForm">
+          <input id="manualBlockIp" name="ip_address" placeholder="IP 주소" autocomplete="off">
+          <div class="time-input">
+            <input id="manualBlockMinutes" name="minutes" type="number" min="1" max="1440" value="10" aria-label="차단 시간">
+            <span aria-hidden="true">분</span>
+          </div>
+          <button class="small-button" type="submit">차단</button>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="ip-address-col">
+              <col class="ip-fail-col">
+              <col class="ip-time-col">
+              <col class="ip-time-col">
+              <col class="ip-time-col">
+              <col class="ip-action-col">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>IP</th>
+                <th>실패</th>
+                <th>최근 실패</th>
+                <th>차단 시작</th>
+                <th>해제 시각</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="ipBlocksTable"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="ipBlocksEmptyState">
+          <strong>차단 또는 실패 기록이 없습니다.</strong>
+          <span>로그인 실패가 누적되거나 관리자가 IP를 차단하면 여기에 표시됩니다.</span>
+        </div>
+      </section>
+
+      <section class="panel security-logs-panel" id="securityLogsPanel">
+        <div class="panel-header">
+          <div>
+            <h2>보안 로그</h2>
+            <p>로그인 성공·실패·차단 이벤트 기록</p>
+          </div>
+          <select id="securityLimitSelect" aria-label="보안 로그 조회 개수">
+            <option value="50">최근 50개</option>
+            <option value="100" selected>최근 100개</option>
+            <option value="200">최근 200개</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="security-type-col">
+              <col class="security-user-col">
+              <col class="security-ip-col">
+              <col class="security-message-col">
+              <col class="security-time-col">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>이벤트</th>
+                <th>계정</th>
+                <th>IP</th>
+                <th>메시지</th>
+                <th>시각</th>
+              </tr>
+            </thead>
+            <tbody id="securityLogsTable"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="securityLogsEmptyState">
+          <strong>보안 로그가 없습니다.</strong>
+          <span>로그인 이벤트가 발생하면 여기에 표시됩니다.</span>
+        </div>
       </section>
     </main>
 

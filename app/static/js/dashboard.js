@@ -9,20 +9,40 @@ const roleLabels = {
   viewer: "열람자",
 };
 
+const securityEventLabels = {
+  login_success: "로그인 성공",
+  login_failure: "로그인 실패",
+  blocked_attempt: "차단 시도",
+  ip_blocked: "자동 차단",
+  manual_ip_blocked: "수동 차단",
+  ip_unblocked: "차단 해제",
+  login_attempt: "로그인",
+};
+
 const elements = {
   apiState: document.querySelector("#apiState"),
+  blockedIps: document.querySelector("#blockedIps"),
   createdEvents: document.querySelector("#createdEvents"),
   databasePath: document.querySelector("#databasePath"),
   deletedEvents: document.querySelector("#deletedEvents"),
   emptyState: document.querySelector("#emptyState"),
   eventsTable: document.querySelector("#eventsTable"),
+  ipBlocksEmptyState: document.querySelector("#ipBlocksEmptyState"),
+  ipBlocksTable: document.querySelector("#ipBlocksTable"),
+  ipBlockSaveState: document.querySelector("#ipBlockSaveState"),
   limitSelect: document.querySelector("#limitSelect"),
+  manualBlockForm: document.querySelector("#manualBlockForm"),
+  manualBlockIp: document.querySelector("#manualBlockIp"),
+  manualBlockMinutes: document.querySelector("#manualBlockMinutes"),
   monitorConfigured: document.querySelector("#monitorConfigured"),
   monitorDot: document.querySelector("#monitorDot"),
   monitorPathState: document.querySelector("#monitorPathState"),
   monitorState: document.querySelector("#monitorState"),
   pendingUsers: document.querySelector("#pendingUsers"),
   refreshButton: document.querySelector("#refreshButton"),
+  securityLimitSelect: document.querySelector("#securityLimitSelect"),
+  securityLogsEmptyState: document.querySelector("#securityLogsEmptyState"),
+  securityLogsTable: document.querySelector("#securityLogsTable"),
   totalEvents: document.querySelector("#totalEvents"),
   userSaveState: document.querySelector("#userSaveState"),
   usersEmptyState: document.querySelector("#usersEmptyState"),
@@ -91,11 +111,12 @@ function getFileKind(event) {
   return { label: "파일", className: "file" };
 }
 
-function updateSummary(events, users) {
+function updateSummary(events, users, ipBlocks) {
   elements.totalEvents.textContent = events.length;
   elements.createdEvents.textContent = events.filter((event) => event.event_type === "created").length;
   elements.deletedEvents.textContent = events.filter((event) => event.event_type === "deleted").length;
   elements.pendingUsers.textContent = users.filter((user) => !user.is_active).length;
+  elements.blockedIps.textContent = ipBlocks.filter((block) => block.is_blocked).length;
 }
 
 function renderEvents(events) {
@@ -158,6 +179,58 @@ function renderUsers(users) {
   elements.usersEmptyState.classList.toggle("visible", users.length === 0);
 }
 
+function renderIpBlocks(blocks) {
+  elements.ipBlocksTable.innerHTML = blocks
+    .map((block) => {
+      const statusClass = block.is_blocked ? "blocked" : "pending";
+      const statusLabel = block.is_blocked ? "차단" : "관찰";
+      return `
+        <tr>
+          <td>
+            <span class="file-cell">
+              <span class="badge ${statusClass}">${statusLabel}</span>
+              <strong class="truncate" title="${escapeHtml(block.ip_address)}">${escapeHtml(block.ip_address)}</strong>
+            </span>
+          </td>
+          <td>${block.failed_attempts || 0}</td>
+          <td>${formatDate(block.last_failed_at)}</td>
+          <td>${formatDate(block.blocked_at)}</td>
+          <td>${formatDate(block.blocked_until)}</td>
+          <td>
+            ${
+              block.is_blocked
+                ? `<button class="small-button danger" type="button" data-action="unblock-ip" data-ip="${escapeHtml(block.ip_address)}">해제</button>`
+                : "-"
+            }
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  elements.ipBlocksEmptyState.classList.toggle("visible", blocks.length === 0);
+}
+
+function renderSecurityLogs(logs) {
+  elements.securityLogsTable.innerHTML = logs
+    .map((log) => {
+      const eventType = log.event_type || "login_attempt";
+      const label = securityEventLabels[eventType] || eventType;
+      return `
+        <tr>
+          <td><span class="badge ${escapeHtml(eventType)}">${escapeHtml(label)}</span></td>
+          <td><span class="truncate" title="${escapeHtml(log.username || "-")}">${escapeHtml(log.username || "-")}</span></td>
+          <td><span class="truncate" title="${escapeHtml(log.ip_address || "-")}">${escapeHtml(log.ip_address || "-")}</span></td>
+          <td><span class="truncate" title="${escapeHtml(log.message || "-")}">${escapeHtml(log.message || "-")}</span></td>
+          <td>${formatDate(log.created_at)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  elements.securityLogsEmptyState.classList.toggle("visible", logs.length === 0);
+}
+
 async function updateUser(userId, payload) {
   elements.userSaveState.textContent = "저장 중";
 
@@ -209,12 +282,69 @@ async function loadUsers() {
   return users;
 }
 
+async function loadIpBlocks() {
+  const response = await fetch("/api/ip-blocks");
+  const blocks = await response.json();
+
+  renderIpBlocks(blocks);
+  return blocks;
+}
+
+async function loadSecurityLogs() {
+  const limit = elements.securityLimitSelect.value;
+  const response = await fetch(`/api/security-logs?limit=${limit}`);
+  const logs = await response.json();
+
+  renderSecurityLogs(logs);
+  return logs;
+}
+
+async function blockIp(ipAddress, minutes) {
+  elements.ipBlockSaveState.textContent = "차단 중";
+
+  const response = await fetch("/api/ip-blocks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ip_address: ipAddress, minutes }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "IP를 차단하지 못했습니다.");
+  }
+
+  elements.ipBlockSaveState.textContent = "차단됨";
+}
+
+async function unblockIp(ipAddress) {
+  elements.ipBlockSaveState.textContent = "해제 중";
+
+  const response = await fetch(`/api/ip-blocks/${encodeURIComponent(ipAddress)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "IP 차단을 해제하지 못했습니다.");
+  }
+
+  elements.ipBlockSaveState.textContent = "해제됨";
+}
+
 async function refreshDashboard() {
   elements.refreshButton.disabled = true;
 
   try {
-    const [events, users] = await Promise.all([loadEvents(), loadUsers(), loadHealth()]);
-    updateSummary(events, users);
+    const [events, users, ipBlocks] = await Promise.all([
+      loadEvents(),
+      loadUsers(),
+      loadIpBlocks(),
+      loadSecurityLogs(),
+      loadHealth(),
+    ]);
+    updateSummary(events, users, ipBlocks);
   } catch (error) {
     elements.apiState.textContent = "연결 실패";
     elements.monitorState.textContent = "확인 실패";
@@ -227,8 +357,38 @@ async function refreshDashboard() {
 
 elements.refreshButton.addEventListener("click", refreshDashboard);
 elements.limitSelect.addEventListener("change", async () => {
-  const [events, users] = await Promise.all([loadEvents(), loadUsers()]);
-  updateSummary(events, users);
+  const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks()]);
+  updateSummary(events, users, ipBlocks);
+});
+
+elements.securityLimitSelect.addEventListener("change", loadSecurityLogs);
+
+elements.manualBlockForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  try {
+    await blockIp(elements.manualBlockIp.value.trim(), elements.manualBlockMinutes.value);
+    elements.manualBlockIp.value = "";
+    const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks(), loadSecurityLogs()]);
+    updateSummary(events, users, ipBlocks);
+  } catch (error) {
+    elements.ipBlockSaveState.textContent = error.message;
+  }
+});
+
+elements.ipBlocksTable.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action='unblock-ip']");
+  if (!button) {
+    return;
+  }
+
+  try {
+    await unblockIp(button.dataset.ip);
+    const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks(), loadSecurityLogs()]);
+    updateSummary(events, users, ipBlocks);
+  } catch (error) {
+    elements.ipBlockSaveState.textContent = error.message;
+  }
 });
 
 elements.usersTable.addEventListener("change", async (event) => {

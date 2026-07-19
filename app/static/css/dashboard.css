@@ -127,12 +127,15 @@ body {
   padding: 32px;
 }
 
+.shell > * + * {
+  margin-top: 18px;
+}
+
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
 }
 
 .topbar-actions {
@@ -207,9 +210,8 @@ h1 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
-  margin-bottom: 18px;
 }
 
 .summary-grid.compact {
@@ -251,8 +253,43 @@ h1 {
   padding: 20px;
 }
 
-.users-panel {
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 150px auto;
+  gap: 10px;
   margin-bottom: 18px;
+}
+
+.inline-form input {
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.time-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-input input {
+  width: 100%;
+}
+
+.time-input span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafb;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .panel-header {
@@ -335,6 +372,38 @@ table {
 
 .user-action-col {
   width: 110px;
+}
+
+.ip-address-col {
+  width: 22%;
+}
+
+.ip-fail-col {
+  width: 78px;
+}
+
+.ip-time-col {
+  width: 170px;
+}
+
+.ip-action-col {
+  width: 96px;
+}
+
+.security-type-col {
+  width: 140px;
+}
+
+.security-user-col {
+  width: 18%;
+}
+
+.security-ip-col {
+  width: 18%;
+}
+
+.security-time-col {
+  width: 170px;
 }
 
 th,
@@ -473,6 +542,21 @@ td:nth-child(4) {
   color: #8a4b05;
 }
 
+.badge.blocked,
+.badge.login_failure,
+.badge.blocked_attempt,
+.badge.ip_blocked,
+.badge.manual_ip_blocked {
+  background: #fee4e2;
+  color: var(--danger);
+}
+
+.badge.login_success,
+.badge.ip_unblocked {
+  background: #dcfae6;
+  color: #087443;
+}
+
 .row-actions {
   display: flex;
   gap: 8px;
@@ -557,6 +641,10 @@ dd {
 
   .summary-grid,
   .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-form {
     grid-template-columns: 1fr;
   }
 

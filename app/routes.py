@@ -17,8 +17,9 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from app.auth.decorators import login_required, roles_required
-from app.auth.models import list_users, update_user
+from app.auth.models import block_ip, list_ip_blocks, list_security_logs, list_users, unblock_ip, update_user
 from app.models import list_file_events
+from app.nas_paths import NasPathConfigError, resolve_nas_root, to_portal_path
 
 
 bp = Blueprint("main", __name__)
@@ -42,7 +43,13 @@ def _nas_root_path():
     if not monitor_path:
         abort(500, description="NAS_MONITOR_PATH is not configured.")
 
-    return Path(monitor_path).resolve()
+    try:
+        return resolve_nas_root(
+            monitor_path,
+            allow_mapped_drive=current_app.config.get("NAS_ALLOW_MAPPED_DRIVE", False),
+        )
+    except NasPathConfigError as error:
+        abort(500, description=str(error))
 
 
 def _safe_nas_path(subpath=""):
@@ -321,13 +328,79 @@ def health():
 def events():
     limit = request.args.get("limit", default=100, type=int)
     limit = min(max(limit, 1), 500)
-    return jsonify(list_file_events(limit=limit))
+    events = list_file_events(limit=limit)
+
+    try:
+        root_path = _nas_root_path()
+    except Exception:
+        root_path = None
+
+    for event in events:
+        event["file_path"] = to_portal_path(event.get("file_path"), root_path) if root_path else "NAS:/hidden"
+        event["src_path"] = to_portal_path(event.get("src_path"), root_path) if root_path else None
+        event["dest_path"] = to_portal_path(event.get("dest_path"), root_path) if root_path else None
+
+    return jsonify(events)
 
 
 @bp.get("/api/users")
 @roles_required("admin")
 def users():
     return jsonify(list_users())
+
+
+@bp.get("/api/ip-blocks")
+@roles_required("admin")
+def ip_blocks():
+    return jsonify(list_ip_blocks())
+
+
+@bp.post("/api/ip-blocks")
+@roles_required("admin")
+def create_ip_block():
+    data = request.get_json(silent=True) or {}
+    ip_address = str(data.get("ip_address", "")).strip()
+    minutes = data.get("minutes", current_app.config["LOGIN_BLOCK_MINUTES"])
+
+    if not ip_address:
+        return jsonify({"error": "IP address is required"}), 400
+
+    try:
+        minutes = int(minutes)
+    except (TypeError, ValueError):
+        return jsonify({"error": "minutes must be an integer"}), 400
+
+    minutes = min(max(minutes, 1), 1440)
+    block = block_ip(
+        ip_address,
+        blocked_by=session.get("username", "admin"),
+        reason="Manual block",
+        minutes=minutes,
+        user_agent=request.headers.get("User-Agent"),
+    )
+    return jsonify(block), 201
+
+
+@bp.delete("/api/ip-blocks/<path:ip_address>")
+@roles_required("admin")
+def delete_ip_block(ip_address):
+    block = unblock_ip(
+        ip_address,
+        blocked_by=session.get("username", "admin"),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    if not block:
+        return jsonify({"error": "IP address not found"}), 404
+
+    return jsonify(block)
+
+
+@bp.get("/api/security-logs")
+@roles_required("admin")
+def security_logs():
+    limit = request.args.get("limit", default=100, type=int)
+    limit = min(max(limit, 1), 500)
+    return jsonify(list_security_logs(limit=limit))
 
 
 @bp.patch("/api/users/<int:user_id>")

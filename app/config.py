@@ -14,6 +14,9 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     DATABASE_PATH = Path(os.getenv("DATABASE_PATH", "instance/events.sqlite3"))
     NAS_MONITOR_PATH = os.getenv("NAS_MONITOR_PATH", "").strip()
+    NAS_ALLOW_MAPPED_DRIVE = os.getenv("NAS_ALLOW_MAPPED_DRIVE", "false").lower() == "true"
+    LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv("LOGIN_MAX_FAILED_ATTEMPTS", "3"))
+    LOGIN_BLOCK_MINUTES = int(os.getenv("LOGIN_BLOCK_MINUTES", "10"))
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip()
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin1234")
 

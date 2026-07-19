@@ -45,6 +45,7 @@ ON users (role);
 
 CREATE TABLE IF NOT EXISTS login_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL DEFAULT 'login_attempt',
     username TEXT NOT NULL,
     user_id INTEGER,
     success INTEGER NOT NULL DEFAULT 0,
@@ -60,6 +61,24 @@ ON login_logs (created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_login_logs_user_id
 ON login_logs (user_id);
+
+CREATE TABLE IF NOT EXISTS ip_blocks (
+    ip_address TEXT PRIMARY KEY,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    last_failed_at TEXT,
+    blocked_at TEXT,
+    blocked_until TEXT,
+    is_blocked INTEGER NOT NULL DEFAULT 0,
+    blocked_by TEXT,
+    block_reason TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ip_blocks_is_blocked
+ON ip_blocks (is_blocked);
+
+CREATE INDEX IF NOT EXISTS idx_ip_blocks_blocked_until
+ON ip_blocks (blocked_until);
 
 CREATE TABLE IF NOT EXISTS download_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,4 +121,19 @@ def close_db(error=None):
 def init_db():
     db = get_db()
     db.executescript(SCHEMA)
+    _ensure_column(db, "login_logs", "event_type", "TEXT NOT NULL DEFAULT 'login_attempt'")
+    db.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_login_logs_event_type
+        ON login_logs (event_type)
+        """
+    )
     db.commit()
+
+
+def _ensure_column(db, table_name, column_name, column_definition):
+    columns = db.execute(f"PRAGMA table_info({table_name})").fetchall()
+    if any(column["name"] == column_name for column in columns):
+        return
+
+    db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
