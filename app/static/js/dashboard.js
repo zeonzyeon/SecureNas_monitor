@@ -1,7 +1,12 @@
-// 대시보드 상태와 최근 파일 생성/삭제 이벤트를 API에서 가져와 화면에 표시
 const eventLabels = {
   created: "생성",
   deleted: "삭제",
+};
+
+const roleLabels = {
+  admin: "관리자",
+  user: "사용자",
+  viewer: "열람자",
 };
 
 const elements = {
@@ -16,8 +21,12 @@ const elements = {
   monitorDot: document.querySelector("#monitorDot"),
   monitorPathState: document.querySelector("#monitorPathState"),
   monitorState: document.querySelector("#monitorState"),
+  pendingUsers: document.querySelector("#pendingUsers"),
   refreshButton: document.querySelector("#refreshButton"),
   totalEvents: document.querySelector("#totalEvents"),
+  userSaveState: document.querySelector("#userSaveState"),
+  usersEmptyState: document.querySelector("#usersEmptyState"),
+  usersTable: document.querySelector("#usersTable"),
 };
 
 function formatDate(value) {
@@ -63,7 +72,7 @@ function getFileKind(event) {
     return { label: "텍스트", className: "text" };
   }
 
-  if (["pdf"].includes(extension)) {
+  if (extension === "pdf") {
     return { label: "PDF", className: "pdf" };
   }
 
@@ -82,10 +91,11 @@ function getFileKind(event) {
   return { label: "파일", className: "file" };
 }
 
-function updateSummary(events) {
+function updateSummary(events, users) {
   elements.totalEvents.textContent = events.length;
   elements.createdEvents.textContent = events.filter((event) => event.event_type === "created").length;
   elements.deletedEvents.textContent = events.filter((event) => event.event_type === "deleted").length;
+  elements.pendingUsers.textContent = users.filter((user) => !user.is_active).length;
 }
 
 function renderEvents(events) {
@@ -114,11 +124,65 @@ function renderEvents(events) {
   elements.emptyState.classList.toggle("visible", events.length === 0);
 }
 
+function renderUsers(users) {
+  elements.usersTable.innerHTML = users
+    .map((user) => {
+      const statusLabel = user.is_active ? "활성" : "승인 대기";
+      const statusClass = user.is_active ? "active" : "pending";
+      return `
+        <tr>
+          <td><strong>${escapeHtml(user.username)}</strong></td>
+          <td>
+            <select class="role-select" data-user-id="${user.id}" aria-label="${escapeHtml(user.username)} 역할">
+              ${Object.entries(roleLabels)
+                .map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`)
+                .join("")}
+            </select>
+          </td>
+          <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+          <td>${formatDate(user.created_at)}</td>
+          <td>
+            <div class="row-actions">
+              ${
+                user.is_active
+                  ? `<button class="small-button danger" type="button" data-action="deactivate" data-user-id="${user.id}">비활성</button>`
+                  : `<button class="small-button" type="button" data-action="approve" data-user-id="${user.id}">승인</button>`
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  elements.usersEmptyState.classList.toggle("visible", users.length === 0);
+}
+
+async function updateUser(userId, payload) {
+  elements.userSaveState.textContent = "저장 중";
+
+  const response = await fetch(`/api/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "사용자 정보를 저장하지 못했습니다.");
+  }
+
+  elements.userSaveState.textContent = "저장됨";
+  await loadUsers();
+}
+
 async function loadHealth() {
   const response = await fetch("/health");
   const health = await response.json();
 
-  elements.apiState.textContent = health.status === "ok" ? "정상" : "점검 필요";
+  elements.apiState.textContent = health.status === "ok" ? "정상" : "확인 필요";
   elements.databasePath.textContent = health.database;
   elements.monitorConfigured.textContent = health.monitor_path_configured ? "설정됨" : "미설정";
   elements.monitorState.textContent = health.monitor_path_configured ? "감시 준비됨" : "감시 비활성";
@@ -133,18 +197,28 @@ async function loadEvents() {
   const response = await fetch(`/api/events?limit=${limit}`);
   const events = await response.json();
 
-  updateSummary(events);
   renderEvents(events);
+  return events;
+}
+
+async function loadUsers() {
+  const response = await fetch("/api/users");
+  const users = await response.json();
+
+  renderUsers(users);
+  return users;
 }
 
 async function refreshDashboard() {
   elements.refreshButton.disabled = true;
 
   try {
-    await Promise.all([loadHealth(), loadEvents()]);
+    const [events, users] = await Promise.all([loadEvents(), loadUsers(), loadHealth()]);
+    updateSummary(events, users);
   } catch (error) {
     elements.apiState.textContent = "연결 실패";
     elements.monitorState.textContent = "확인 실패";
+    elements.userSaveState.textContent = error.message;
     console.error(error);
   } finally {
     elements.refreshButton.disabled = false;
@@ -152,7 +226,41 @@ async function refreshDashboard() {
 }
 
 elements.refreshButton.addEventListener("click", refreshDashboard);
-elements.limitSelect.addEventListener("change", loadEvents);
+elements.limitSelect.addEventListener("change", async () => {
+  const [events, users] = await Promise.all([loadEvents(), loadUsers()]);
+  updateSummary(events, users);
+});
+
+elements.usersTable.addEventListener("change", async (event) => {
+  if (!event.target.matches(".role-select")) {
+    return;
+  }
+
+  try {
+    await updateUser(event.target.dataset.userId, { role: event.target.value });
+  } catch (error) {
+    elements.userSaveState.textContent = error.message;
+    await loadUsers();
+  }
+});
+
+elements.usersTable.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const payload =
+    button.dataset.action === "approve"
+      ? { is_active: true, role: "user" }
+      : { is_active: false };
+
+  try {
+    await updateUser(button.dataset.userId, payload);
+  } catch (error) {
+    elements.userSaveState.textContent = error.message;
+  }
+});
 
 refreshDashboard();
 setInterval(refreshDashboard, 10000);

@@ -3,6 +3,8 @@ from flask import Flask
 
 from app.config import Config
 from app.db import close_db, init_db
+from app.auth import bp as auth_bp
+from app.auth.models import ensure_default_admin
 from app.routes import bp
 
 
@@ -11,9 +13,11 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     app.teardown_appcontext(close_db)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(bp)
 
     with app.app_context():
         init_db()
+        ensure_default_admin(app.config["ADMIN_USERNAME"], app.config["ADMIN_PASSWORD"])
 
     return app

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureNas Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/files.css') }}">
+  </head>
+  <body>
+    <main class="files-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NAS Access Portal</p>
+          <h1>NAS 파일 목록</h1>
+          <p class="welcome">{{ session.username }} 계정으로 로그인됨</p>
+        </div>
+        <a class="text-button" href="{{ url_for('auth.logout') }}">로그아웃</a>
+      </header>
+
+      <nav class="breadcrumbs" aria-label="현재 폴더">
+        <a href="{{ url_for('main.files') }}">PlanB_Media</a>
+        {% for crumb in breadcrumbs %}
+          <span>/</span>
+          <a href="{{ url_for('main.files', subpath=crumb.href) }}">{{ crumb.name }}</a>
+        {% endfor %}
+      </nav>
+
+      {% if error %}
+        <section class="notice">{{ error }}</section>
+      {% endif %}
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>{{ current_path if current_path else "전체 파일" }}</h2>
+          <span>{{ files|length }}개 항목</span>
+        </div>
+
+        {% if parent_path is not none %}
+          <a class="up-link" href="{{ url_for('main.files', subpath=parent_path) }}">상위 폴더</a>
+        {% endif %}
+
+        {% if files %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>유형</th>
+                  <th>크기</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for file in files %}
+                  <tr>
+                    <td>
+                      {% if file.is_dir %}
+                        <a class="file-link" href="{{ url_for('main.files', subpath=file.href) }}">{{ file.name }}</a>
+                      {% else %}
+                        <strong>{{ file.name }}</strong>
+                      {% endif %}
+                    </td>
+                    <td>{{ "폴더" if file.is_dir else "파일" }}</td>
+                    <td>{{ "-" if file.size is none else "{:,} bytes".format(file.size) }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <strong>표시할 파일이 없습니다.</strong>
+            <span>PlanB_Media 안에 폴더나 파일이 생기면 자동으로 표시됩니다.</span>
+          </div>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

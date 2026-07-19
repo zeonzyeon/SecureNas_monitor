@@ -10,9 +10,12 @@ load_dotenv(BASE_DIR / ".env")
 
 
 class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     DATABASE_PATH = Path(os.getenv("DATABASE_PATH", "instance/events.sqlite3"))
     NAS_MONITOR_PATH = os.getenv("NAS_MONITOR_PATH", "").strip()
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip()
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin1234")
 
     if not DATABASE_PATH.is_absolute():
         DATABASE_PATH = BASE_DIR / DATABASE_PATH

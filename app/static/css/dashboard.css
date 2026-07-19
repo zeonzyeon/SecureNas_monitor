@@ -135,6 +135,12 @@ body {
   margin-bottom: 24px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .eyebrow {
   color: var(--accent-strong);
   font-size: 13px;
@@ -157,6 +163,40 @@ h1 {
   color: var(--text);
   cursor: pointer;
   font-size: 22px;
+}
+
+.text-button,
+.small-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.text-button {
+  height: 42px;
+  padding: 0 14px;
+}
+
+.small-button {
+  min-width: 64px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.small-button.danger {
+  background: #ffffff;
+  color: var(--danger);
 }
 
 .summary-grid {
@@ -205,6 +245,10 @@ h1 {
   padding: 20px;
 }
 
+.users-panel {
+  margin-bottom: 18px;
+}
+
 .panel-header {
   display: flex;
   align-items: flex-start;
@@ -234,6 +278,17 @@ select {
   padding: 0 10px;
 }
 
+.role-select {
+  min-width: 104px;
+}
+
+.save-state {
+  min-height: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -254,6 +309,26 @@ table {
 
 .event-time-col {
   width: 170px;
+}
+
+.user-name-col {
+  width: 24%;
+}
+
+.user-role-col {
+  width: 150px;
+}
+
+.user-status-col {
+  width: 120px;
+}
+
+.user-created-col {
+  width: 170px;
+}
+
+.user-action-col {
+  width: 110px;
 }
 
 th,
@@ -380,6 +455,21 @@ td:nth-child(4) {
 .badge.created {
   background: #dff7f3;
   color: var(--accent-strong);
+}
+
+.badge.active {
+  background: #dcfae6;
+  color: #087443;
+}
+
+.badge.pending {
+  background: #fff4d6;
+  color: #8a4b05;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .empty-state {
