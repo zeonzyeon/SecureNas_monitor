@@ -133,6 +133,7 @@ def create_login_log(
     return cursor.lastrowid
 
 
+# IP 차단 상태 조회
 def get_ip_block(ip_address):
     if not ip_address:
         return None
@@ -158,11 +159,13 @@ def get_ip_block(ip_address):
     return dict(row) if row else None
 
 
+# IP 차단 여부 확인
 def is_ip_blocked(ip_address):
     block = get_ip_block(ip_address)
     return bool(block and block["is_blocked"])
 
 
+# 로그인 실패 누적
 def record_failed_login(username, user_id, ip_address, user_agent=None, message="Invalid username or password"):
     create_login_log(
         username=username or "-",
@@ -211,6 +214,7 @@ def record_failed_login(username, user_id, ip_address, user_agent=None, message=
     return block
 
 
+# 로그인 실패 횟수 초기화
 def reset_ip_failures(ip_address):
     if not ip_address:
         return
@@ -234,6 +238,7 @@ def reset_ip_failures(ip_address):
     db.commit()
 
 
+# IP 차단 등록
 def block_ip(ip_address, blocked_by="admin", reason="Manual block", minutes=None, user_agent=None, log_event=True):
     if not ip_address:
         return None
@@ -281,6 +286,7 @@ def block_ip(ip_address, blocked_by="admin", reason="Manual block", minutes=None
     return get_ip_block(ip_address)
 
 
+# IP 차단 해제
 def unblock_ip(ip_address, blocked_by="admin", user_agent=None, log_event=True):
     if not ip_address:
         return None
@@ -319,6 +325,7 @@ def unblock_ip(ip_address, blocked_by="admin", user_agent=None, log_event=True):
     return get_ip_block(ip_address)
 
 
+# 만료된 IP 차단 정리
 def clear_expired_ip_blocks(ip_address=None):
     db = get_db()
     if ip_address:
@@ -354,6 +361,7 @@ def clear_expired_ip_blocks(ip_address=None):
     db.commit()
 
 
+# IP 차단 목록 조회
 def list_ip_blocks():
     clear_expired_ip_blocks()
     rows = get_db().execute(
@@ -376,6 +384,7 @@ def list_ip_blocks():
     return [dict(row) for row in rows]
 
 
+# 보안 로그 조회
 def list_security_logs(limit=100):
     rows = get_db().execute(
         """

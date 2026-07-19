@@ -38,6 +38,7 @@ def _role_permissions(role):
     }
 
 
+# NAS 루트 경로 조회
 def _nas_root_path():
     monitor_path = current_app.config["NAS_MONITOR_PATH"]
     if not monitor_path:
@@ -52,6 +53,7 @@ def _nas_root_path():
         abort(500, description=str(error))
 
 
+# NAS 하위 경로 검증
 def _safe_nas_path(subpath=""):
     root_path = _nas_root_path()
     requested_path = (root_path / PurePosixPath(subpath).as_posix()).resolve()
@@ -64,6 +66,7 @@ def _safe_nas_path(subpath=""):
     return root_path, requested_path
 
 
+# 파일 목록 리다이렉트
 def _redirect_to_files(subpath=""):
     parent = PurePosixPath(subpath).parent.as_posix()
     if parent == ".":
@@ -72,6 +75,7 @@ def _redirect_to_files(subpath=""):
     return redirect(_files_url(parent))
 
 
+# 파일 목록 URL 생성
 def _files_url(subpath=""):
     normalized_path = PurePosixPath(subpath).as_posix().strip("/")
 
@@ -349,12 +353,14 @@ def users():
     return jsonify(list_users())
 
 
+# IP 차단 목록 API
 @bp.get("/api/ip-blocks")
 @roles_required("admin")
 def ip_blocks():
     return jsonify(list_ip_blocks())
 
 
+# IP 수동 차단 API
 @bp.post("/api/ip-blocks")
 @roles_required("admin")
 def create_ip_block():
@@ -381,6 +387,7 @@ def create_ip_block():
     return jsonify(block), 201
 
 
+# IP 차단 해제 API
 @bp.delete("/api/ip-blocks/<path:ip_address>")
 @roles_required("admin")
 def delete_ip_block(ip_address):
@@ -395,6 +402,7 @@ def delete_ip_block(ip_address):
     return jsonify(block)
 
 
+# 보안 로그 API
 @bp.get("/api/security-logs")
 @roles_required("admin")
 def security_logs():
