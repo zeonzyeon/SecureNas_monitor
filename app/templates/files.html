@@ -7,14 +7,24 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/files.css') }}">
   </head>
   <body>
+    {% set role_labels = {"admin": "관리자", "user": "사용자", "viewer": "열람자"} %}
     <main class="files-shell">
       <header class="topbar">
         <div>
           <p class="eyebrow">NAS Access Portal</p>
           <h1>NAS 파일 목록</h1>
-          <p class="welcome">{{ session.username }} 계정으로 로그인됨</p>
+          <p class="welcome">
+            <span class="role-badge {{ session.role }}">{{ role_labels.get(session.role, session.role) }}</span>
+            <span class="username">{{ session.username }}</span>
+            <span>계정으로 로그인됨</span>
+          </p>
         </div>
-        <a class="text-button" href="{{ url_for('auth.logout') }}">로그아웃</a>
+        <div class="topbar-actions">
+          {% if permissions.can_dashboard %}
+            <a class="text-button" href="{{ url_for('main.dashboard') }}">대시보드</a>
+          {% endif %}
+          <a class="text-button" href="{{ url_for('auth.logout') }}">로그아웃</a>
+        </div>
       </header>
 
       <nav class="breadcrumbs" aria-label="현재 폴더">
@@ -25,8 +35,36 @@
         {% endfor %}
       </nav>
 
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for message in messages %}
+            <section class="notice" role="alert">{{ message }}</section>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
       {% if error %}
-        <section class="notice">{{ error }}</section>
+        <section class="notice" role="alert">{{ error }}</section>
+      {% endif %}
+
+      {% if permissions.can_create %}
+        <section class="panel tools-panel">
+          <form class="tool-form" method="post" action="{{ url_for('main.create_file_item') }}">
+            <input type="hidden" name="current_path" value="{{ current_path }}">
+            <select name="item_type" aria-label="생성 유형">
+              <option value="file">파일</option>
+              <option value="folder">폴더</option>
+            </select>
+            <input name="name" placeholder="이름 입력" autocomplete="off">
+            <button type="submit">생성</button>
+          </form>
+
+          <form class="tool-form upload-form" method="post" action="{{ url_for('main.upload_file') }}" enctype="multipart/form-data">
+            <input type="hidden" name="current_path" value="{{ current_path }}">
+            <input type="file" name="file">
+            <button type="submit">업로드</button>
+          </form>
+        </section>
       {% endif %}
 
       <section class="panel">
@@ -47,6 +85,7 @@
                   <th>이름</th>
                   <th>유형</th>
                   <th>크기</th>
+                  <th>작업</th>
                 </tr>
               </thead>
               <tbody>
@@ -61,6 +100,24 @@
                     </td>
                     <td>{{ "폴더" if file.is_dir else "파일" }}</td>
                     <td>{{ "-" if file.size is none else "{:,} bytes".format(file.size) }}</td>
+                    <td>
+                      <div class="action-row">
+                        {% if not file.is_dir %}
+                          <a class="small-button" href="{{ url_for('main.open_file', subpath=file.href) }}" target="_blank">열기</a>
+                          {% if permissions.can_download %}
+                            <a class="small-button" href="{{ url_for('main.download_file', subpath=file.href) }}">다운로드</a>
+                          {% endif %}
+                          {% if permissions.can_edit %}
+                            <a class="small-button" href="{{ url_for('main.edit_file', subpath=file.href) }}">수정</a>
+                          {% endif %}
+                        {% endif %}
+                        {% if permissions.can_delete %}
+                          <form method="post" action="{{ url_for('main.delete_file_item', subpath=file.href) }}">
+                            <button class="small-button danger" type="submit">삭제</button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -69,7 +126,7 @@
         {% else %}
           <div class="empty-state">
             <strong>표시할 파일이 없습니다.</strong>
-            <span>PlanB_Media 안에 폴더나 파일이 생기면 자동으로 표시됩니다.</span>
+            <span>현재 폴더에 항목이 없습니다.</span>
           </div>
         {% endif %}
       </section>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureNas Edit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/files.css') }}">
+  </head>
+  <body>
+    <main class="files-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NAS Access Portal</p>
+          <h1>파일 수정</h1>
+          <p class="welcome">{{ file_path }}</p>
+        </div>
+        <a class="text-button" href="{{ url_for('main.files') }}">목록</a>
+      </header>
+
+      <section class="panel">
+        <form method="post" class="editor-form">
+          <textarea name="content" spellcheck="false">{{ content }}</textarea>
+          <div class="editor-actions">
+            <a class="text-button" href="{{ url_for('main.files') }}">취소</a>
+            <button type="submit">저장</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

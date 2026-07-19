@@ -1,6 +1,20 @@
+import shutil
 from pathlib import Path, PurePosixPath
 
-from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from werkzeug.utils import secure_filename
 
 from app.auth.decorators import login_required, roles_required
 from app.auth.models import list_users, update_user
@@ -8,6 +22,56 @@ from app.models import list_file_events
 
 
 bp = Blueprint("main", __name__)
+
+EDITABLE_EXTENSIONS = {".txt", ".md", ".csv", ".log", ".json", ".xml", ".html", ".css", ".js", ".py"}
+
+
+def _role_permissions(role):
+    return {
+        "can_read": role in {"admin", "user", "viewer"},
+        "can_create": role in {"admin", "user"},
+        "can_download": role in {"admin", "user"},
+        "can_edit": role == "admin",
+        "can_delete": role == "admin",
+        "can_dashboard": role == "admin",
+    }
+
+
+def _nas_root_path():
+    monitor_path = current_app.config["NAS_MONITOR_PATH"]
+    if not monitor_path:
+        abort(500, description="NAS_MONITOR_PATH is not configured.")
+
+    return Path(monitor_path).resolve()
+
+
+def _safe_nas_path(subpath=""):
+    root_path = _nas_root_path()
+    requested_path = (root_path / PurePosixPath(subpath).as_posix()).resolve()
+
+    try:
+        requested_path.relative_to(root_path)
+    except ValueError:
+        abort(404)
+
+    return root_path, requested_path
+
+
+def _redirect_to_files(subpath=""):
+    parent = PurePosixPath(subpath).parent.as_posix()
+    if parent == ".":
+        parent = ""
+
+    return redirect(_files_url(parent))
+
+
+def _files_url(subpath=""):
+    normalized_path = PurePosixPath(subpath).as_posix().strip("/")
+
+    if not normalized_path or normalized_path == ".":
+        return url_for("main.files")
+
+    return url_for("main.files", subpath=normalized_path)
 
 
 @bp.get("/")
@@ -46,15 +110,10 @@ def files(subpath):
             breadcrumbs=breadcrumbs,
             current_path="",
             parent_path=parent_path,
+            permissions=_role_permissions(session.get("role")),
         )
 
-    root_path = Path(monitor_path).resolve()
-    requested_path = (root_path / subpath).resolve()
-
-    try:
-        requested_path.relative_to(root_path)
-    except ValueError:
-        abort(404)
+    root_path, requested_path = _safe_nas_path(subpath)
 
     try:
         if not root_path.exists():
@@ -97,7 +156,151 @@ def files(subpath):
         breadcrumbs=breadcrumbs,
         current_path=PurePosixPath(subpath).as_posix().strip("/"),
         parent_path=parent_path,
+        permissions=_role_permissions(session.get("role")),
     )
+
+
+@bp.get("/files/open/<path:subpath>")
+@login_required
+def open_file(subpath):
+    root_path, requested_path = _safe_nas_path(subpath)
+
+    if not requested_path.exists() or not requested_path.is_file():
+        abort(404)
+
+    return send_file(requested_path, as_attachment=False)
+
+
+@bp.get("/files/download/<path:subpath>")
+@roles_required("admin", "user")
+def download_file(subpath):
+    root_path, requested_path = _safe_nas_path(subpath)
+
+    if not requested_path.exists() or not requested_path.is_file():
+        abort(404)
+
+    return send_file(requested_path, as_attachment=True, download_name=requested_path.name)
+
+
+@bp.post("/files/create")
+@roles_required("admin", "user")
+def create_file_item():
+    current_path = request.form.get("current_path", "").strip("/")
+    item_type = request.form.get("item_type", "file")
+    name = request.form.get("name", "").strip()
+
+    if not name or "/" in name or "\\" in name:
+        flash("파일 또는 폴더 이름을 올바르게 입력하세요.")
+        return redirect(_files_url(current_path))
+
+    root_path, current_directory = _safe_nas_path(current_path)
+    if not current_directory.exists() or not current_directory.is_dir():
+        abort(404)
+
+    target_path = (current_directory / name).resolve()
+    try:
+        target_path.relative_to(root_path)
+    except ValueError:
+        abort(404)
+
+    if target_path.exists():
+        flash("이미 같은 이름의 항목이 있습니다.")
+        return redirect(_files_url(current_path))
+
+    if item_type == "folder":
+        target_path.mkdir()
+    else:
+        target_path.touch()
+
+    return redirect(_files_url(current_path))
+
+
+@bp.post("/files/upload")
+@roles_required("admin", "user")
+def upload_file():
+    current_path = request.form.get("current_path", "").strip("/")
+    upload = request.files.get("file")
+
+    if not upload or not upload.filename:
+        flash("업로드할 파일을 선택하세요.")
+        return redirect(_files_url(current_path))
+
+    root_path, current_directory = _safe_nas_path(current_path)
+    if not current_directory.exists() or not current_directory.is_dir():
+        abort(404)
+
+    filename = Path(upload.filename).name
+    if not filename or "/" in filename or "\\" in filename:
+        filename = secure_filename(upload.filename)
+
+    if not filename:
+        flash("파일 이름을 확인할 수 없습니다.")
+        return redirect(_files_url(current_path))
+
+    target_path = (current_directory / filename).resolve()
+
+    try:
+        target_path.relative_to(root_path)
+    except ValueError:
+        abort(404)
+
+    if target_path.exists():
+        flash("이미 같은 이름의 파일이 있습니다.")
+        return redirect(_files_url(current_path))
+
+    upload.save(target_path)
+    return redirect(_files_url(current_path))
+
+
+@bp.post("/files/delete/<path:subpath>")
+@roles_required("admin")
+def delete_file_item(subpath):
+    root_path, requested_path = _safe_nas_path(subpath)
+
+    if not requested_path.exists():
+        abort(404)
+
+    if requested_path.is_dir():
+        shutil.rmtree(requested_path)
+    else:
+        requested_path.unlink()
+
+    return _redirect_to_files(subpath)
+
+
+@bp.get("/files/edit/<path:subpath>")
+@roles_required("admin")
+def edit_file(subpath):
+    root_path, requested_path = _safe_nas_path(subpath)
+
+    if not requested_path.exists() or not requested_path.is_file():
+        abort(404)
+
+    if requested_path.suffix.lower() not in EDITABLE_EXTENSIONS:
+        flash("이 파일 형식은 사이트에서 직접 수정할 수 없습니다.")
+        return _redirect_to_files(subpath)
+
+    try:
+        content = requested_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = requested_path.read_text(encoding="cp949")
+
+    return render_template("edit_file.html", file_path=PurePosixPath(subpath).as_posix(), content=content)
+
+
+@bp.post("/files/edit/<path:subpath>")
+@roles_required("admin")
+def edit_file_post(subpath):
+    root_path, requested_path = _safe_nas_path(subpath)
+
+    if not requested_path.exists() or not requested_path.is_file():
+        abort(404)
+
+    if requested_path.suffix.lower() not in EDITABLE_EXTENSIONS:
+        abort(400)
+
+    requested_path.write_text(request.form.get("content", ""), encoding="utf-8")
+    return _redirect_to_files(subpath)
 
 
 @bp.get("/health")

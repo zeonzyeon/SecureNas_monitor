@@ -111,7 +111,7 @@ def register_post():
         flash("이미 등록된 계정입니다.")
         return render_template("register.html"), 409
 
-    flash("계정 등록이 완료되었습니다. 관리자 승인 후 사용할 수 있습니다.")
+    flash("계정 등록이 완료되었습니다.<br>관리자 승인 후 사용할 수 있습니다.")
     return redirect(url_for("auth.login"))
 
 

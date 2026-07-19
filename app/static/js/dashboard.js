@@ -261,6 +261,3 @@ elements.usersTable.addEventListener("click", async (event) => {
     elements.userSaveState.textContent = error.message;
   }
 });
-
-refreshDashboard();
-setInterval(refreshDashboard, 10000);
