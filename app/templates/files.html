@@ -80,6 +80,12 @@
         {% if files %}
           <div class="table-wrap">
             <table>
+              <colgroup>
+                <col class="file-list-name-col">
+                <col class="file-list-type-col">
+                <col class="file-list-size-col">
+                <col class="file-list-action-col">
+              </colgroup>
               <thead>
                 <tr>
                   <th>이름</th>
@@ -103,12 +109,12 @@
                     <td>
                       <div class="action-row">
                         {% if not file.is_dir %}
-                          <a class="small-button" href="{{ url_for('main.open_file', subpath=file.href) }}" target="_blank">열기</a>
+                          <a class="small-button open" href="{{ url_for('main.open_file', subpath=file.href) }}" target="_blank">열기</a>
                           {% if permissions.can_download %}
-                            <a class="small-button" href="{{ url_for('main.download_file', subpath=file.href) }}">다운로드</a>
+                            <a class="small-button download" href="{{ url_for('main.download_file', subpath=file.href) }}">다운로드</a>
                           {% endif %}
                           {% if permissions.can_edit %}
-                            <a class="small-button" href="{{ url_for('main.edit_file', subpath=file.href) }}">수정</a>
+                            <a class="small-button edit" href="{{ url_for('main.edit_file', subpath=file.href) }}">수정</a>
                           {% endif %}
                         {% endif %}
                         {% if permissions.can_delete %}

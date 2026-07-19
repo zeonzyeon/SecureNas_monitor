@@ -19,6 +19,7 @@
       <nav class="nav">
         <a class="nav-item active" href="/">Dashboard</a>
         <a class="nav-item" href="#usersPanel">Users</a>
+        <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
         <a class="nav-item disabled" href="#" aria-disabled="true">Blocked IPs</a>
         <a class="nav-item disabled" href="#" aria-disabled="true">Settings</a>
       </nav>
@@ -39,6 +40,7 @@
           <h1>관리자 대시보드</h1>
         </div>
         <div class="topbar-actions">
+          <a class="text-button primary" href="{{ url_for('main.files') }}">파일 관리</a>
           <a class="text-button" href="{{ url_for('auth.logout') }}">로그아웃</a>
           <button class="icon-button" type="button" id="refreshButton" title="새로고침" aria-label="새로고침">
             ↻

@@ -258,6 +258,22 @@ table {
   table-layout: fixed;
 }
 
+.file-list-name-col {
+  width: auto;
+}
+
+.file-list-type-col {
+  width: 82px;
+}
+
+.file-list-size-col {
+  width: 132px;
+}
+
+.file-list-action-col {
+  width: 360px;
+}
+
 th,
 td {
   padding: 13px 10px;
@@ -276,15 +292,12 @@ td {
   font-size: 14px;
 }
 
-td:nth-child(4) {
-  width: 260px;
-}
-
 .action-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(74px, 1fr));
   align-items: center;
-  flex-wrap: wrap;
   gap: 6px;
+  max-width: 360px;
 }
 
 .action-row form {
@@ -295,7 +308,8 @@ td:nth-child(4) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
+  width: 100%;
+  min-width: 74px;
   height: 32px;
   padding: 0 9px;
   border: 1px solid var(--line);
@@ -306,6 +320,24 @@ td:nth-child(4) {
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+}
+
+.small-button.open {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.small-button.download {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.small-button.edit {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .small-button.danger {

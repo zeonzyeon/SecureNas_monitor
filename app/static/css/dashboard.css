@@ -185,6 +185,12 @@ h1 {
   padding: 0 14px;
 }
 
+.text-button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
 .small-button {
   min-width: 64px;
   height: 34px;
