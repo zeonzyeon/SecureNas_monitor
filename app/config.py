@@ -13,8 +13,8 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     DATABASE_PATH = Path(os.getenv("DATABASE_PATH", "instance/events.sqlite3"))
-    NAS_MONITOR_PATH = os.getenv("NAS_MONITOR_PATH", "").strip()
-    NAS_ALLOW_MAPPED_DRIVE = os.getenv("NAS_ALLOW_MAPPED_DRIVE", "false").lower() == "true"
+    NAS_MONITOR_PATH = os.getenv("NAS_MONITOR_PATH", "instance/nas_monitor_files").strip()
+    NAS_ALLOW_MAPPED_DRIVE = os.getenv("NAS_ALLOW_MAPPED_DRIVE", "true").lower() == "true"
     LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv("LOGIN_MAX_FAILED_ATTEMPTS", "3"))
     LOGIN_BLOCK_MINUTES = int(os.getenv("LOGIN_BLOCK_MINUTES", "10"))
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip()
@@ -22,3 +22,6 @@ class Config:
 
     if not DATABASE_PATH.is_absolute():
         DATABASE_PATH = BASE_DIR / DATABASE_PATH
+
+    if NAS_MONITOR_PATH and not Path(NAS_MONITOR_PATH).is_absolute():
+        NAS_MONITOR_PATH = str(BASE_DIR / NAS_MONITOR_PATH)

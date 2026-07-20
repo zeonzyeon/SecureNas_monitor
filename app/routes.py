@@ -336,9 +336,9 @@ def events():
         root_path = None
 
     for event in events:
-        event["file_path"] = to_portal_path(event.get("file_path"), root_path) if root_path else "NAS:/hidden"
-        event["src_path"] = to_portal_path(event.get("src_path"), root_path) if root_path else None
-        event["dest_path"] = to_portal_path(event.get("dest_path"), root_path) if root_path else None
+        event["file_path"] = to_portal_path(event.get("file_path"), root_path)
+        event["src_path"] = to_portal_path(event.get("src_path"), root_path)
+        event["dest_path"] = to_portal_path(event.get("dest_path"), root_path)
 
     return jsonify(events)
 

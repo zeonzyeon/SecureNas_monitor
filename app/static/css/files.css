@@ -1,13 +1,13 @@
 :root {
-  --bg: #f4f6f8;
+  --bg: #fafaf7;
   --surface: #ffffff;
-  --line: #d9e0e7;
-  --text: #17202a;
-  --muted: #657383;
-  --accent-strong: #115e59;
-  --warning-bg: #fff4d6;
-  --warning-text: #8a4b05;
-  --shadow: 0 16px 42px rgba(23, 32, 42, 0.08);
+  --line: #deded8;
+  --text: #050505;
+  --muted: #6f6f68;
+  --accent-strong: #050505;
+  --warning-bg: #eeeeea;
+  --warning-text: #292925;
+  --shadow: 0 10px 28px rgba(5, 5, 5, 0.05);
 }
 
 * {
@@ -74,18 +74,18 @@ body {
 }
 
 .role-badge.admin {
-  background: #fee4e2;
-  color: #b42318;
+  background: #050505;
+  color: #ffffff;
 }
 
 .role-badge.user {
-  background: #dff7f3;
-  color: #115e59;
+  background: #eeeeea;
+  color: #050505;
 }
 
 .role-badge.viewer {
-  background: #e8edff;
-  color: #3538cd;
+  background: #f4f4ef;
+  color: #292925;
 }
 
 .eyebrow {
@@ -203,7 +203,7 @@ h1 {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #f8fafb;
+  background: #f4f4ef;
   color: var(--text);
   cursor: pointer;
   font: inherit;
@@ -213,7 +213,7 @@ h1 {
 }
 
 .tool-form input[type="file"]::file-selector-button:hover {
-  background: #eef2f5;
+  background: #eeeeea;
 }
 
 .tool-form button,
@@ -323,27 +323,27 @@ td {
 }
 
 .small-button.open {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border-color: #050505;
+  background: #050505;
+  color: #ffffff;
 }
 
 .small-button.download {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #15803d;
+  border-color: #c9c9c2;
+  background: #eeeeea;
+  color: #050505;
 }
 
 .small-button.edit {
-  border-color: #fed7aa;
-  background: #fff7ed;
-  color: #c2410c;
+  border-color: #deded8;
+  background: #ffffff;
+  color: #050505;
 }
 
 .small-button.danger {
-  border-color: #fecdca;
-  background: #fee4e2;
-  color: #b42318;
+  border-color: #050505;
+  background: #ffffff;
+  color: #050505;
 }
 
 .editor-form {
@@ -375,7 +375,7 @@ td {
   padding: 36px 20px;
   border: 1px dashed var(--line);
   border-radius: 8px;
-  background: #fafbfc;
+  background: #f7f7f4;
   text-align: center;
 }
 
