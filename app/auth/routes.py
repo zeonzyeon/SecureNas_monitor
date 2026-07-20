@@ -24,6 +24,7 @@ def _home_for_role(role):
     return url_for("main.files")
 
 
+# 클라이언트 IP 추출
 def _client_ip():
     forwarded_for = request.headers.get("X-Forwarded-For", "")
     if forwarded_for:
@@ -32,12 +33,14 @@ def _client_ip():
     return request.remote_addr
 
 
+# 차단된 로그인 응답
 def _blocked_login_response(status_code=429):
     block_minutes = current_app.config["LOGIN_BLOCK_MINUTES"]
     flash(f"로그인 시도가 너무 많습니다. {block_minutes}분 후 다시 시도해주세요.")
     return render_template("login.html"), status_code
 
 
+# 로그인 화면
 @bp.get("/login")
 def login():
     ip_address = _client_ip()
@@ -54,6 +57,7 @@ def login():
     return render_template("login.html")
 
 
+# 로그인 처리
 @bp.post("/login")
 def login_post():
     username = request.form.get("username", "").strip()
