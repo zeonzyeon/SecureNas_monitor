@@ -9,7 +9,7 @@
   --accent: #050505;
   --accent-strong: #050505;
   --danger: #111111;
-  --warning: #777771;
+  --warning: #dc2626;
   --shadow: 0 10px 28px rgba(5, 5, 5, 0.05);
 }
 
@@ -145,7 +145,7 @@ body {
 }
 
 .status-dot.ok {
-  background: #f7f7f4;
+  background: #16a34a;
 }
 
 .shell {

@@ -5,8 +5,8 @@
   --text: #050505;
   --muted: #6f6f68;
   --accent-strong: #050505;
-  --warning-bg: #eeeeea;
-  --warning-text: #292925;
+  --warning-bg: #fee2e2;
+  --warning-text: #b91c1c;
   --shadow: 0 10px 28px rgba(5, 5, 5, 0.05);
 }
 
@@ -150,6 +150,7 @@ h1 {
 .notice {
   margin-bottom: 16px;
   padding: 14px;
+  border-color: #fecaca;
   background: var(--warning-bg);
   color: var(--warning-text);
   font-weight: 800;

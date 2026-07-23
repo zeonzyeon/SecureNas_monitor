@@ -6,8 +6,8 @@
   --muted: #6f6f68;
   --accent: #050505;
   --accent-strong: #050505;
-  --danger: #050505;
-  --danger-bg: #eeeeea;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
   --shadow: 0 10px 28px rgba(5, 5, 5, 0.06);
 }
 
@@ -92,6 +92,7 @@ h1 {
 .alert {
   margin-bottom: 16px;
   padding: 12px;
+  border: 1px solid #fecaca;
   border-radius: 8px;
   background: var(--danger-bg);
   color: var(--danger);

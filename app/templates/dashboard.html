@@ -23,8 +23,8 @@
           <a class="nav-item nav-subitem" href="{{ url_for('main.file_events_page') }}">File Events</a>
           <a class="nav-item nav-subitem" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
         </div>
-        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
         <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
+        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
         <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
       </nav>
 
@@ -79,7 +79,7 @@
         <div class="panel-header">
           <div>
             <h2>사용자 승인</h2>
-            <p>최근 등록된 사용자 10명</p>
+            <p>최근 등록된 사용자</p>
           </div>
           <a class="small-button secondary" href="{{ url_for('main.users_page') }}">전체보기</a>
         </div>
