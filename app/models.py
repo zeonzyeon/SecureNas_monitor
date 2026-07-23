@@ -1,6 +1,6 @@
 ﻿# 파일 접근 이벤트를 SQLite에 저장하고 조회하는 데이터 접근 함수
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from app.db import get_db
 
@@ -34,8 +34,8 @@ def create_file_event(event_type, file_path, is_directory=False, src_path=None, 
     return cursor.lastrowid
 
 
-# 저장된 파일 이벤트 최신순으로 조회
-def list_file_events(limit=100):
+# 저장된 파일 이벤트 최신순 조회
+def list_file_events(limit=100, root_path=None):
     db = get_db()
     rows = db.execute(
         """
@@ -58,9 +58,35 @@ def list_file_events(limit=100):
         ORDER BY created_at DESC, id DESC
         LIMIT ?
         """,
-        (limit * 3,),
+        (limit * 5,),
     ).fetchall()
-    return _collapse_near_duplicates([dict(row) for row in rows], limit)
+    events = [dict(row) for row in rows]
+
+    if root_path:
+        events = [event for event in events if _is_event_under_root(event, root_path)]
+
+    return _collapse_near_duplicates(events, limit)
+
+
+def _is_event_under_root(event, root_path):
+    return _path_is_under_root(event.get("file_path"), root_path)
+
+
+def _path_is_under_root(path_value, root_path):
+    if not path_value:
+        return False
+
+    try:
+        Path(path_value).resolve().relative_to(root_path)
+        return True
+    except (OSError, ValueError):
+        pass
+
+    try:
+        PureWindowsPath(str(path_value)).relative_to(PureWindowsPath(str(root_path)))
+        return True
+    except ValueError:
+        return False
 
 
 def _collapse_near_duplicates(events, limit):

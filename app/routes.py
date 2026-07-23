@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 from app.auth.decorators import login_required, roles_required
 from app.auth.models import block_ip, list_ip_blocks, list_security_logs, list_users, unblock_ip, update_user
+from app.config import BASE_DIR
 from app.models import list_file_events
 from app.nas_paths import NasPathConfigError, resolve_nas_root, to_portal_path
 
@@ -85,6 +86,49 @@ def _files_url(subpath=""):
     return url_for("main.files", subpath=normalized_path)
 
 
+def _env_path():
+    return BASE_DIR / ".env"
+
+
+def _read_env_values():
+    path = _env_path()
+    values = {}
+
+    if not path.exists():
+        return values
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+
+        key, value = stripped.split("=", 1)
+        values[key.strip()] = value.strip()
+
+    return values
+
+
+def _update_env_values(updates):
+    path = _env_path()
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    seen_keys = set()
+    next_lines = []
+
+    for line in lines:
+        key = line.split("=", 1)[0].strip() if "=" in line else None
+        if key in updates:
+            next_lines.append(f"{key}={updates[key]}")
+            seen_keys.add(key)
+        else:
+            next_lines.append(line)
+
+    for key, value in updates.items():
+        if key not in seen_keys:
+            next_lines.append(f"{key}={value}")
+
+    path.write_text("\n".join(next_lines) + "\n", encoding="utf-8")
+
+
 @bp.get("/")
 def index():
     if not session.get("user_id"):
@@ -100,6 +144,36 @@ def index():
 @roles_required("admin")
 def dashboard():
     return render_template("dashboard.html")
+
+
+@bp.get("/settings")
+@roles_required("admin")
+def settings_page():
+    return render_template("settings.html")
+
+
+@bp.get("/users")
+@roles_required("admin")
+def users_page():
+    return render_template("users.html")
+
+
+@bp.get("/file-events")
+@roles_required("admin")
+def file_events_page():
+    return render_template("file_events.html")
+
+
+@bp.get("/blocked-ips")
+@roles_required("admin")
+def blocked_ips_page():
+    return render_template("blocked_ips.html")
+
+
+@bp.get("/security-logs")
+@roles_required("admin")
+def security_logs_page():
+    return render_template("security_logs.html")
 
 
 @bp.get("/files", defaults={"subpath": ""})
@@ -322,7 +396,62 @@ def health():
         {
             "status": "ok",
             "database": str(current_app.config["DATABASE_PATH"]),
+            "nas_monitor_path": monitor_path,
             "monitor_path_configured": bool(monitor_path),
+        }
+    )
+
+
+@bp.get("/api/settings")
+@roles_required("admin")
+def settings():
+    env_values = _read_env_values()
+    runtime_nas_path = current_app.config["NAS_MONITOR_PATH"]
+    saved_nas_path = env_values.get("NAS_MONITOR_PATH", runtime_nas_path)
+    runtime_allow_mapped_drive = bool(current_app.config.get("NAS_ALLOW_MAPPED_DRIVE", False))
+    saved_allow_mapped_drive = env_values.get("NAS_ALLOW_MAPPED_DRIVE", str(runtime_allow_mapped_drive)).lower() == "true"
+
+    return jsonify(
+        {
+            "database_path": str(current_app.config["DATABASE_PATH"]),
+            "nas_monitor_path": saved_nas_path,
+            "runtime_nas_monitor_path": runtime_nas_path,
+            "nas_allow_mapped_drive": saved_allow_mapped_drive,
+            "runtime_nas_allow_mapped_drive": runtime_allow_mapped_drive,
+            "restart_required": saved_nas_path != runtime_nas_path
+            or saved_allow_mapped_drive != runtime_allow_mapped_drive,
+        }
+    )
+
+
+@bp.patch("/api/settings")
+@roles_required("admin")
+def update_settings():
+    data = request.get_json(silent=True) or {}
+    nas_monitor_path = str(data.get("nas_monitor_path", "")).strip()
+    allow_mapped_drive = bool(data.get("nas_allow_mapped_drive", False))
+
+    if nas_monitor_path:
+        try:
+            resolve_nas_root(nas_monitor_path, allow_mapped_drive=allow_mapped_drive)
+        except NasPathConfigError as error:
+            return jsonify({"error": str(error)}), 400
+
+    _update_env_values(
+        {
+            "NAS_MONITOR_PATH": nas_monitor_path,
+            "NAS_ALLOW_MAPPED_DRIVE": "true" if allow_mapped_drive else "false",
+        }
+    )
+    current_app.config["NAS_MONITOR_PATH"] = nas_monitor_path
+    current_app.config["NAS_ALLOW_MAPPED_DRIVE"] = allow_mapped_drive
+
+    return jsonify(
+        {
+            "database_path": str(current_app.config["DATABASE_PATH"]),
+            "nas_monitor_path": nas_monitor_path,
+            "nas_allow_mapped_drive": allow_mapped_drive,
+            "restart_required": True,
         }
     )
 
@@ -332,12 +461,13 @@ def health():
 def events():
     limit = request.args.get("limit", default=100, type=int)
     limit = min(max(limit, 1), 500)
-    events = list_file_events(limit=limit)
 
     try:
         root_path = _nas_root_path()
     except Exception:
         root_path = None
+
+    events = list_file_events(limit=limit, root_path=root_path)
 
     for event in events:
         event["file_path"] = to_portal_path(event.get("file_path"), root_path)

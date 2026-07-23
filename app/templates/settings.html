@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureNas Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body>
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SN</div>
+        <div>
+          <p class="brand-name">SecureNas</p>
+          <p class="brand-subtitle">Access Monitor</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <div class="nav-subtree" aria-label="Dashboard 하위 메뉴">
+          <a class="nav-item nav-subitem" href="{{ url_for('main.users_page') }}">Users</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.file_events_page') }}">File Events</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
+        </div>
+        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
+        <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
+        <a class="nav-item active" href="{{ url_for('main.settings_page') }}">Settings</a>
+      </nav>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">System Settings</p>
+          <h1>설정</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="text-button" href="{{ url_for('main.dashboard') }}">대시보드</a>
+          <a class="text-button primary" href="{{ url_for('main.files') }}">파일 관리</a>
+        </div>
+      </header>
+
+      <section class="panel settings-panel">
+        <div class="panel-header">
+          <div>
+            <h2>NAS 경로 설정</h2>
+            <p>.env에 저장할 NAS 접근 경로를 관리합니다.</p>
+          </div>
+          <span class="save-state" id="settingsSaveState" aria-live="polite"></span>
+        </div>
+
+        <form class="settings-form" id="settingsForm">
+          <label>
+            <span>NAS 경로</span>
+            <input id="nasPathInput" name="nas_monitor_path" placeholder="\\192.168.0.2\PlanB_Media">
+          </label>
+          <label class="checkbox-row">
+            <input id="allowMappedDriveInput" name="nas_allow_mapped_drive" type="checkbox">
+            <span>테스트용 로컬/매핑 드라이브 경로 허용</span>
+          </label>
+          <p class="settings-note">
+            파일 관리는 저장 후 새 경로를 사용합니다. 실시간 감시는 서버 재시작 후 새 경로로 다시 연결됩니다.
+          </p>
+          <button class="small-button" type="submit">저장</button>
+        </form>
+      </section>
+
+      <section class="content-grid">
+        <aside class="panel side-panel">
+          <h2>저장된 설정</h2>
+          <dl>
+            <div>
+              <dt>.env NAS 경로</dt>
+              <dd id="savedNasPath">확인 중</dd>
+            </div>
+            <div>
+              <dt>.env 로컬 경로 허용</dt>
+              <dd id="savedAllowMappedDrive">확인 중</dd>
+            </div>
+          </dl>
+        </aside>
+
+        <aside class="panel side-panel">
+          <h2>현재 적용 중</h2>
+          <dl>
+            <div>
+              <dt>실행 중 NAS 경로</dt>
+              <dd id="runtimeNasPath">확인 중</dd>
+            </div>
+            <div>
+              <dt>DB</dt>
+              <dd id="databasePath">확인 중</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+  </body>
+</html>

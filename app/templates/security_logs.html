@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Security Logs - SecureNas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body data-page="security-logs">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SN</div>
+        <div>
+          <p class="brand-name">SecureNas</p>
+          <p class="brand-subtitle">Access Monitor</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="nav-item" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <div class="nav-subtree" aria-label="Dashboard 하위 메뉴">
+          <a class="nav-item nav-subitem" href="{{ url_for('main.users_page') }}">Users</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.file_events_page') }}">File Events</a>
+          <a class="nav-item nav-subitem active" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
+        </div>
+        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
+        <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
+        <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
+      </nav>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Access Audit</p>
+          <h1>보안 로그</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="text-button" href="{{ url_for('main.dashboard') }}">대시보드</a>
+          <button class="icon-button" type="button" id="refreshButton" title="새로고침" aria-label="새로고침">↻</button>
+        </div>
+      </header>
+
+      <section class="panel security-logs-panel">
+        <div class="panel-header">
+          <div>
+            <h2>전체 보안 로그</h2>
+            <p>로그인 성공·실패·차단 이벤트 기록</p>
+          </div>
+          <select id="securityLimitSelect" aria-label="보안 로그 조회 개수">
+            <option value="50">최근 50개</option>
+            <option value="100" selected>최근 100개</option>
+            <option value="200">최근 200개</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="security-type-col">
+              <col class="security-user-col">
+              <col class="security-ip-col">
+              <col class="security-message-col">
+              <col class="security-time-col">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>이벤트</th>
+                <th>계정</th>
+                <th>IP</th>
+                <th>메시지</th>
+                <th>시각</th>
+              </tr>
+            </thead>
+            <tbody id="securityLogsTable"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="securityLogsEmptyState">
+          <strong>보안 로그가 없습니다.</strong>
+          <span>로그인 이벤트가 발생하면 여기에 표시됩니다.</span>
+        </div>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>

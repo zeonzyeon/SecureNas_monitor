@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Users - SecureNas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body data-page="users">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SN</div>
+        <div>
+          <p class="brand-name">SecureNas</p>
+          <p class="brand-subtitle">Access Monitor</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="nav-item" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <div class="nav-subtree" aria-label="Dashboard 하위 메뉴">
+          <a class="nav-item nav-subitem active" href="{{ url_for('main.users_page') }}">Users</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.file_events_page') }}">File Events</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
+        </div>
+        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
+        <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
+        <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
+      </nav>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Account Control</p>
+          <h1>사용자 승인</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="text-button" href="{{ url_for('main.dashboard') }}">대시보드</a>
+          <button class="icon-button" type="button" id="refreshButton" title="새로고침" aria-label="새로고침">↻</button>
+        </div>
+      </header>
+
+      <section class="panel users-panel">
+        <div class="panel-header">
+          <div>
+            <h2>사용자 목록</h2>
+            <p>등록된 계정의 활성 상태와 역할을 관리합니다.</p>
+          </div>
+          <span class="save-state" id="userSaveState" aria-live="polite"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="user-name-col">
+              <col class="user-role-col">
+              <col class="user-status-col">
+              <col class="user-created-col">
+              <col class="user-action-col">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>아이디</th>
+                <th>역할</th>
+                <th>상태</th>
+                <th>등록일</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="usersEmptyState">
+          <strong>등록된 사용자가 없습니다.</strong>
+          <span>사용자가 계정 등록을 요청하면 여기에 표시됩니다.</span>
+        </div>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File Events - SecureNas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body data-page="file-events">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SN</div>
+        <div>
+          <p class="brand-name">SecureNas</p>
+          <p class="brand-subtitle">Access Monitor</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="nav-item" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <div class="nav-subtree" aria-label="Dashboard 하위 메뉴">
+          <a class="nav-item nav-subitem" href="{{ url_for('main.users_page') }}">Users</a>
+          <a class="nav-item nav-subitem active" href="{{ url_for('main.file_events_page') }}">File Events</a>
+          <a class="nav-item nav-subitem" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
+        </div>
+        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
+        <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
+        <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
+      </nav>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">File Activity</p>
+          <h1>파일 이벤트</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="text-button" href="{{ url_for('main.dashboard') }}">대시보드</a>
+          <button class="icon-button" type="button" id="refreshButton" title="새로고침" aria-label="새로고침">↻</button>
+        </div>
+      </header>
+
+      <section class="panel events-panel">
+        <div class="panel-header">
+          <div>
+            <h2>전체 파일 이벤트</h2>
+            <p>현재 NAS 경로에서 감지한 파일 생성/삭제 로그</p>
+          </div>
+          <select id="limitSelect" aria-label="조회 개수">
+            <option value="50">최근 50개</option>
+            <option value="100" selected>최근 100개</option>
+            <option value="200">최근 200개</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="event-type-col">
+              <col class="file-name-col">
+              <col class="file-path-col">
+              <col class="event-time-col">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>유형</th>
+                <th>파일명</th>
+                <th>경로</th>
+                <th>시각</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTable"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <strong>아직 기록된 이벤트가 없습니다.</strong>
+          <span>파일이 생성되거나 삭제되면 여기에 표시됩니다.</span>
+        </div>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>

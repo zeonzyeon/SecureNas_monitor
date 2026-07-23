@@ -38,6 +38,7 @@ const elements = {
   monitorDot: document.querySelector("#monitorDot"),
   monitorPathState: document.querySelector("#monitorPathState"),
   monitorState: document.querySelector("#monitorState"),
+  nasMonitorPath: document.querySelector("#nasMonitorPath"),
   pendingUsers: document.querySelector("#pendingUsers"),
   refreshButton: document.querySelector("#refreshButton"),
   securityLimitSelect: document.querySelector("#securityLimitSelect"),
@@ -48,6 +49,15 @@ const elements = {
   usersEmptyState: document.querySelector("#usersEmptyState"),
   usersTable: document.querySelector("#usersTable"),
 };
+
+let isRefreshing = false;
+const pageMode = document.body.dataset.page || "dashboard";
+
+function setText(element, value) {
+  if (element) {
+    element.textContent = value;
+  }
+}
 
 function formatDate(value) {
   if (!value) {
@@ -112,14 +122,18 @@ function getFileKind(event) {
 }
 
 function updateSummary(events, users, ipBlocks) {
-  elements.totalEvents.textContent = events.length;
-  elements.createdEvents.textContent = events.filter((event) => event.event_type === "created").length;
-  elements.deletedEvents.textContent = events.filter((event) => event.event_type === "deleted").length;
-  elements.pendingUsers.textContent = users.filter((user) => !user.is_active).length;
-  elements.blockedIps.textContent = ipBlocks.filter((block) => block.is_blocked).length;
+  setText(elements.totalEvents, events.length);
+  setText(elements.createdEvents, events.filter((event) => event.event_type === "created").length);
+  setText(elements.deletedEvents, events.filter((event) => event.event_type === "deleted").length);
+  setText(elements.pendingUsers, users.filter((user) => !user.is_active).length);
+  setText(elements.blockedIps, ipBlocks.filter((block) => block.is_blocked).length);
 }
 
 function renderEvents(events) {
+  if (!elements.eventsTable) {
+    return;
+  }
+
   elements.eventsTable.innerHTML = events
     .map((event) => {
       const label = eventLabels[event.event_type] || event.event_type;
@@ -142,11 +156,17 @@ function renderEvents(events) {
     })
     .join("");
 
-  elements.emptyState.classList.toggle("visible", events.length === 0);
+  elements.emptyState?.classList.toggle("visible", events.length === 0);
 }
 
 function renderUsers(users) {
-  elements.usersTable.innerHTML = users
+  if (!elements.usersTable) {
+    return;
+  }
+
+  const visibleUsers = pageMode === "dashboard" ? users.slice(0, Number(document.body.dataset.userLimit || 10)) : users;
+
+  elements.usersTable.innerHTML = visibleUsers
     .map((user) => {
       const statusLabel = user.is_active ? "활성" : "승인 대기";
       const statusClass = user.is_active ? "active" : "pending";
@@ -176,10 +196,14 @@ function renderUsers(users) {
     })
     .join("");
 
-  elements.usersEmptyState.classList.toggle("visible", users.length === 0);
+  elements.usersEmptyState?.classList.toggle("visible", visibleUsers.length === 0);
 }
 
 function renderIpBlocks(blocks) {
+  if (!elements.ipBlocksTable) {
+    return;
+  }
+
   elements.ipBlocksTable.innerHTML = blocks
     .map((block) => {
       const statusClass = block.is_blocked ? "blocked" : "pending";
@@ -208,10 +232,14 @@ function renderIpBlocks(blocks) {
     })
     .join("");
 
-  elements.ipBlocksEmptyState.classList.toggle("visible", blocks.length === 0);
+  elements.ipBlocksEmptyState?.classList.toggle("visible", blocks.length === 0);
 }
 
 function renderSecurityLogs(logs) {
+  if (!elements.securityLogsTable) {
+    return;
+  }
+
   elements.securityLogsTable.innerHTML = logs
     .map((log) => {
       const eventType = log.event_type || "login_attempt";
@@ -228,11 +256,11 @@ function renderSecurityLogs(logs) {
     })
     .join("");
 
-  elements.securityLogsEmptyState.classList.toggle("visible", logs.length === 0);
+  elements.securityLogsEmptyState?.classList.toggle("visible", logs.length === 0);
 }
 
 async function updateUser(userId, payload) {
-  elements.userSaveState.textContent = "저장 중";
+  setText(elements.userSaveState, "저장 중");
 
   const response = await fetch(`/api/users/${userId}`, {
     method: "PATCH",
@@ -247,7 +275,7 @@ async function updateUser(userId, payload) {
     throw new Error(error.error || "사용자 정보를 저장하지 못했습니다.");
   }
 
-  elements.userSaveState.textContent = "저장됨";
+  setText(elements.userSaveState, "저장됨");
   await loadUsers();
 }
 
@@ -255,22 +283,27 @@ async function loadHealth() {
   const response = await fetch("/health");
   const health = await response.json();
 
-  elements.apiState.textContent = health.status === "ok" ? "정상" : "확인 필요";
-  elements.databasePath.textContent = health.database;
-  elements.monitorConfigured.textContent = health.monitor_path_configured ? "설정됨" : "미설정";
-  elements.monitorState.textContent = health.monitor_path_configured ? "감시 준비됨" : "감시 비활성";
-  elements.monitorPathState.textContent = health.monitor_path_configured
-    ? "NAS_MONITOR_PATH 설정 완료"
-    : "NAS_MONITOR_PATH 미설정";
-  elements.monitorDot.classList.toggle("ok", health.monitor_path_configured);
+  setText(elements.apiState, health.status === "ok" ? "정상" : "확인 필요");
+  setText(elements.databasePath, health.database);
+  setText(elements.nasMonitorPath, health.nas_monitor_path || "미설정");
+  setText(elements.monitorConfigured, health.monitor_path_configured ? "설정됨" : "미설정");
+  setText(elements.monitorState, health.monitor_path_configured ? "감시 준비됨" : "감시 비활성");
+  setText(
+    elements.monitorPathState,
+    health.monitor_path_configured ? "NAS_MONITOR_PATH 설정 완료" : "NAS_MONITOR_PATH 미설정",
+  );
+  elements.monitorDot?.classList.toggle("ok", health.monitor_path_configured);
 }
 
-async function loadEvents() {
-  const limit = elements.limitSelect.value;
+async function loadEvents(options = {}) {
+  const limit = options.limit || elements.limitSelect?.value || document.body.dataset.eventLimit || "10";
   const response = await fetch(`/api/events?limit=${limit}`);
   const events = await response.json();
 
-  renderEvents(events);
+  if (options.render !== false) {
+    renderEvents(events);
+  }
+
   return events;
 }
 
@@ -291,7 +324,7 @@ async function loadIpBlocks() {
 }
 
 async function loadSecurityLogs() {
-  const limit = elements.securityLimitSelect.value;
+  const limit = elements.securityLimitSelect?.value || document.body.dataset.securityLimit || "10";
   const response = await fetch(`/api/security-logs?limit=${limit}`);
   const logs = await response.json();
 
@@ -300,7 +333,7 @@ async function loadSecurityLogs() {
 }
 
 async function blockIp(ipAddress, minutes) {
-  elements.ipBlockSaveState.textContent = "차단 중";
+  setText(elements.ipBlockSaveState, "차단 중");
 
   const response = await fetch("/api/ip-blocks", {
     method: "POST",
@@ -315,11 +348,11 @@ async function blockIp(ipAddress, minutes) {
     throw new Error(error.error || "IP를 차단하지 못했습니다.");
   }
 
-  elements.ipBlockSaveState.textContent = "차단됨";
+  setText(elements.ipBlockSaveState, "차단됨");
 }
 
 async function unblockIp(ipAddress) {
-  elements.ipBlockSaveState.textContent = "해제 중";
+  setText(elements.ipBlockSaveState, "해제 중");
 
   const response = await fetch(`/api/ip-blocks/${encodeURIComponent(ipAddress)}`, {
     method: "DELETE",
@@ -330,40 +363,61 @@ async function unblockIp(ipAddress) {
     throw new Error(error.error || "IP 차단을 해제하지 못했습니다.");
   }
 
-  elements.ipBlockSaveState.textContent = "해제됨";
+  setText(elements.ipBlockSaveState, "해제됨");
 }
 
 async function refreshDashboard() {
-  elements.refreshButton.disabled = true;
+  if (isRefreshing) {
+    return;
+  }
+
+  isRefreshing = true;
+  if (elements.refreshButton) {
+    elements.refreshButton.disabled = true;
+  }
 
   try {
-    const [events, users, ipBlocks] = await Promise.all([
-      loadEvents(),
-      loadUsers(),
-      loadIpBlocks(),
-      loadSecurityLogs(),
-      loadHealth(),
-    ]);
-    updateSummary(events, users, ipBlocks);
+    if (pageMode === "users") {
+      await loadUsers();
+    } else if (pageMode === "blocked-ips") {
+      await loadIpBlocks();
+    } else if (pageMode === "file-events") {
+      await loadEvents();
+    } else if (pageMode === "security-logs") {
+      await loadSecurityLogs();
+    } else {
+      const [events, eventSummary, users, ipBlocks] = await Promise.all([
+        loadEvents(),
+        loadEvents({ limit: 500, render: false }),
+        loadUsers(),
+        loadIpBlocks(),
+        loadSecurityLogs(),
+        loadHealth(),
+      ]);
+      updateSummary(eventSummary, users, ipBlocks);
+    }
   } catch (error) {
-    elements.apiState.textContent = "연결 실패";
-    elements.monitorState.textContent = "확인 실패";
-    elements.userSaveState.textContent = error.message;
+    setText(elements.apiState, "연결 실패");
+    setText(elements.monitorState, "확인 실패");
+    setText(elements.userSaveState, error.message);
     console.error(error);
   } finally {
-    elements.refreshButton.disabled = false;
+    if (elements.refreshButton) {
+      elements.refreshButton.disabled = false;
+    }
+    isRefreshing = false;
   }
 }
 
-elements.refreshButton.addEventListener("click", refreshDashboard);
-elements.limitSelect.addEventListener("change", async () => {
+elements.refreshButton?.addEventListener("click", refreshDashboard);
+elements.limitSelect?.addEventListener("change", async () => {
   const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks()]);
   updateSummary(events, users, ipBlocks);
 });
 
-elements.securityLimitSelect.addEventListener("change", loadSecurityLogs);
+elements.securityLimitSelect?.addEventListener("change", loadSecurityLogs);
 
-elements.manualBlockForm.addEventListener("submit", async (event) => {
+elements.manualBlockForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   try {
@@ -372,11 +426,11 @@ elements.manualBlockForm.addEventListener("submit", async (event) => {
     const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks(), loadSecurityLogs()]);
     updateSummary(events, users, ipBlocks);
   } catch (error) {
-    elements.ipBlockSaveState.textContent = error.message;
+    setText(elements.ipBlockSaveState, error.message);
   }
 });
 
-elements.ipBlocksTable.addEventListener("click", async (event) => {
+elements.ipBlocksTable?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action='unblock-ip']");
   if (!button) {
     return;
@@ -387,11 +441,11 @@ elements.ipBlocksTable.addEventListener("click", async (event) => {
     const [events, users, ipBlocks] = await Promise.all([loadEvents(), loadUsers(), loadIpBlocks(), loadSecurityLogs()]);
     updateSummary(events, users, ipBlocks);
   } catch (error) {
-    elements.ipBlockSaveState.textContent = error.message;
+    setText(elements.ipBlockSaveState, error.message);
   }
 });
 
-elements.usersTable.addEventListener("change", async (event) => {
+elements.usersTable?.addEventListener("change", async (event) => {
   if (!event.target.matches(".role-select")) {
     return;
   }
@@ -399,12 +453,12 @@ elements.usersTable.addEventListener("change", async (event) => {
   try {
     await updateUser(event.target.dataset.userId, { role: event.target.value });
   } catch (error) {
-    elements.userSaveState.textContent = error.message;
+    setText(elements.userSaveState, error.message);
     await loadUsers();
   }
 });
 
-elements.usersTable.addEventListener("click", async (event) => {
+elements.usersTable?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) {
     return;
@@ -418,6 +472,11 @@ elements.usersTable.addEventListener("click", async (event) => {
   try {
     await updateUser(button.dataset.userId, payload);
   } catch (error) {
-    elements.userSaveState.textContent = error.message;
+    setText(elements.userSaveState, error.message);
   }
 });
+
+refreshDashboard();
+if (pageMode === "dashboard") {
+  setInterval(refreshDashboard, 5000);
+}
