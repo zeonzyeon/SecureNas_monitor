@@ -85,7 +85,7 @@ SecureNas_monitor/
 | 역할 | 읽기 | 생성/업로드 | 다운로드 | 수정 | 삭제 | 대시보드 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 관리자 | 가능 | 가능 | 가능 | 가능 | 가능 | 가능 |
-| 사용자 | 가능 | 가능 | 가능 | 불가 | 불가 | 불가 |
+| 사용자 | 가능 | 가능 | 가능 | 가능 | 불가 | 불가 |
 | 열람자 | 가능 | 불가 | 불가 | 불가 | 불가 | 불가 |
 
 <br>
@@ -187,11 +187,16 @@ POST /files/upload
 GET  /files/download/<subpath>
 ```
 
-관리자 전용 파일 작업:
+관리자/사용자 파일 수정:
 
 ```text
 GET  /files/edit/<subpath>
 POST /files/edit/<subpath>
+```
+
+관리자 전용 파일 작업:
+
+```text
 POST /files/delete/<subpath>
 ```
 
@@ -206,4 +211,3 @@ POST /files/delete/<subpath>
 ```text
 사용자 → SecureNas 웹 포털 → Flask 서버 계정 → NAS 공유 폴더
 ```
-

@@ -32,7 +32,7 @@ def _role_permissions(role):
         "can_read": role in {"admin", "user", "viewer"},
         "can_create": role in {"admin", "user"},
         "can_download": role in {"admin", "user"},
-        "can_edit": role == "admin",
+        "can_edit": role in {"admin", "user"},
         "can_delete": role == "admin",
         "can_dashboard": role == "admin",
     }
@@ -280,7 +280,7 @@ def delete_file_item(subpath):
 
 
 @bp.get("/files/edit/<path:subpath>")
-@roles_required("admin")
+@roles_required("admin", "user")
 def edit_file(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
@@ -300,7 +300,7 @@ def edit_file(subpath):
 
 
 @bp.post("/files/edit/<path:subpath>")
-@roles_required("admin")
+@roles_required("admin", "user")
 def edit_file_post(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
