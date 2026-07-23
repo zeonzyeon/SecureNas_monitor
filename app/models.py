@@ -52,7 +52,7 @@ def list_file_events(limit=100, root_path=None):
             ip_address,
             created_at
         FROM file_events
-        WHERE event_type IN ('created', 'deleted')
+        WHERE event_type IN ('created', 'modified', 'deleted')
             AND file_name NOT LIKE ':TMPNAME:%'
             AND file_path NOT LIKE '%:TMPNAME:%'
         ORDER BY created_at DESC, id DESC

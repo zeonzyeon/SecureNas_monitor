@@ -11,14 +11,15 @@ NAS가 전세계 보안 환경에서 가장 인기있는 '은닉 인프라'로 �
 
 ## 주요 기능
 
-- NAS 파일 생성/삭제 이벤트 실시간 탐지
+- NAS 또는 로컬 테스트 폴더의 파일 생성/수정/삭제 이벤트 실시간 탐지
 - SQLite 기반 이벤트/사용자/로그 저장
 - 회원가입 및 로그인
 - 관리자 승인 후 계정 활성화
 - 역할 기반 접근 제어
 - 로그인 실패 누적 시 IP 자동 차단
-- 관리자 대시보드
-- 웹에서 파일 열기/업로드/다운로드/삭제
+- 관리자 대시보드 및 상세 관리 페이지
+- 웹에서 파일 열기/생성/업로드/다운로드/수정/삭제
+- Settings 화면에서 감시 경로 직접 변경
 
 <br>
 
@@ -60,13 +61,21 @@ SecureNas_monitor/
 │  │  │  ├─ dashboard.css
 │  │  │  └─ files.css
 │  │  └─ js/
-│  │     └─ dashboard.js
+│  │     ├─ dashboard.js
+│  │     └─ settings.js
 │  └─ templates/
+│     ├─ blocked_ips.html
 │     ├─ dashboard.html
 │     ├─ edit_file.html
+│     ├─ file_events.html
 │     ├─ files.html
 │     ├─ login.html
-│     └─ register.html
+│     ├─ register.html
+│     ├─ security_logs.html
+│     ├─ settings.html
+│     └─ users.html
+├─ .env
+├─ .env.example
 ├─ requirements.txt
 ├─ run.py
 └─ README.md
@@ -94,10 +103,16 @@ SecureNas_monitor/
 
 - `/login`: 로그인
 - `/register`: 회원가입
-- `/files`: NAS 파일 관리
+- `/files`: 파일 관리
 - `/dashboard`: 관리자 대시보드
+- `/users`: 사용자 승인 및 역할 관리
+- `/file-events`: 파일 이벤트 전체보기
+- `/security-logs`: 보안 로그 전체보기
+- `/blocked-ips`: IP 차단 관리
+- `/settings`: 감시 경로 설정
 
-관리자로 로그인하면 기본적으로 대시보드로 이동합니다. 파일 관리 작업은 대시보드의 `파일 관리` 버튼 또는 `/files`에서 수행합니다.
+관리자로 로그인하면 기본적으로 대시보드로 이동합니다. 일반 사용자와 열람자는 파일 관리로 이동합니다.
+파일 관리 작업은 대시보드의 `파일 관리` 버튼 또는 `/files`에서 수행합니다.
 
 <br>
 
@@ -109,7 +124,7 @@ SecureNas_monitor/
 - 파일/폴더 생성
 - 파일 업로드
 - 파일 다운로드
-- 텍스트 파일 수정
+- 파일 수정
 - 파일/폴더 삭제
 
 현재 사이트에서 직접 수정 가능한 확장자는 다음과 같습니다.
@@ -124,16 +139,13 @@ SecureNas_monitor/
 
 ## 관리자 대시보드
 
-관리자 대시보드에서는 다음을 확인하거나 관리합니다.
+관리자 대시보드에서는 요약 정보와 최근 기록을 확인합니다.
 
-- 전체 파일 이벤트
-- 생성/삭제 이벤트
-- 승인 대기 사용자
-- 사용자 역할 변경
-- 사용자 활성/비활성 처리
+- 최근 등록된 사용자
 - 최근 파일 이벤트
-- 운영 상태
-- IP 차단 및 보안 로그
+- 최근 보안 로그
+
+사용자 승인, 파일 이벤트, 보안 로그는 각 패널의 `전체보기` 버튼으로 상세 페이지에 이동합니다.
 
 <br>
 
@@ -161,6 +173,9 @@ SecureNas_monitor/
 관리자 전용:
 
 ```text
+GET    /health
+GET    /api/settings
+PATCH  /api/settings
 GET    /api/events
 GET    /api/users
 PATCH  /api/users/<user_id>
@@ -168,7 +183,6 @@ GET    /api/ip-blocks
 POST   /api/ip-blocks
 DELETE /api/ip-blocks/<ip_address>
 GET    /api/security-logs
-GET    /health
 ```
 
 로그인 사용자:

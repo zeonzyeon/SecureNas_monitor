@@ -30,7 +30,13 @@ class AccessEventHandler(FileSystemEventHandler):
         self._schedule_file_create(event.src_path)
 
     def on_modified(self, event):
-        return
+        if event.is_directory or self._is_temporary_smb_path(event.src_path):
+            return
+
+        if event.src_path in self.pending_file_creates:
+            return
+
+        self._record("modified", event.src_path, False)
 
     def on_deleted(self, event):
         if event.is_directory:
@@ -63,6 +69,9 @@ class AccessEventHandler(FileSystemEventHandler):
             or self._is_default_new_file_path(event.src_path)
         ):
             self._schedule_file_create(event.dest_path)
+            return
+
+        self._record("modified", event.dest_path, event.is_directory, src_path=event.src_path, dest_path=event.dest_path)
 
     def _schedule_directory_create(self, directory_path):
         self._cancel_pending_directory_create(directory_path)
@@ -116,7 +125,7 @@ class AccessEventHandler(FileSystemEventHandler):
 
         return False
 
-    def _record(self, event_type, file_path, is_directory):
+    def _record(self, event_type, file_path, is_directory, src_path=None, dest_path=None):
         self.pending_directory_creates.pop(file_path, None)
         self.pending_file_creates.pop(file_path, None)
 
@@ -131,6 +140,8 @@ class AccessEventHandler(FileSystemEventHandler):
                 event_type=event_type,
                 file_path=file_path,
                 is_directory=is_directory,
+                src_path=src_path,
+                dest_path=dest_path,
             )
 
     def _is_duplicate(self, event_type, file_path):

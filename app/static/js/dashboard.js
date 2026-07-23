@@ -1,5 +1,6 @@
 const eventLabels = {
   created: "생성",
+  modified: "수정",
   deleted: "삭제",
 };
 

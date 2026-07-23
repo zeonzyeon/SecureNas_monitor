@@ -617,6 +617,11 @@ td:nth-child(4) {
   color: var(--accent-strong);
 }
 
+.badge.modified {
+  background: #f7f7f4;
+  color: #292925;
+}
+
 .badge.active {
   background: #050505;
   color: #ffffff;
