@@ -86,6 +86,17 @@ def _files_url(subpath=""):
     return url_for("main.files", subpath=normalized_path)
 
 
+def _nas_root_label(root_path=None):
+    if root_path and root_path.name:
+        return root_path.name
+
+    monitor_path = current_app.config.get("NAS_MONITOR_PATH", "")
+    if monitor_path:
+        return Path(monitor_path).name or "NAS Root"
+
+    return "NAS Root"
+
+
 def _env_path():
     return BASE_DIR / ".env"
 
@@ -193,6 +204,7 @@ def files(subpath):
             files=files_list,
             error=error,
             breadcrumbs=breadcrumbs,
+            root_label=_nas_root_label(),
             current_path="",
             parent_path=parent_path,
             permissions=_role_permissions(session.get("role")),
@@ -239,6 +251,7 @@ def files(subpath):
         files=files_list,
         error=error,
         breadcrumbs=breadcrumbs,
+        root_label=_nas_root_label(root_path),
         current_path=PurePosixPath(subpath).as_posix().strip("/"),
         parent_path=parent_path,
         permissions=_role_permissions(session.get("role")),
