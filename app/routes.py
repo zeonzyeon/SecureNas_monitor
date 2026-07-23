@@ -20,6 +20,7 @@ from app.auth.decorators import login_required, roles_required
 from app.auth.models import block_ip, list_ip_blocks, list_security_logs, list_users, unblock_ip, update_user
 from app.config import BASE_DIR
 from app.models import list_file_events
+from app.monitor.watcher import restart_monitor
 from app.nas_paths import NasPathConfigError, resolve_nas_root, to_portal_path
 
 
@@ -405,12 +406,15 @@ def edit_file_post(subpath):
 @roles_required("admin")
 def health():
     monitor_path = current_app.config["NAS_MONITOR_PATH"]
+    monitor_active = bool(current_app.config.get("NAS_MONITOR_ACTIVE", False))
     return jsonify(
         {
             "status": "ok",
             "database": str(current_app.config["DATABASE_PATH"]),
             "nas_monitor_path": monitor_path,
             "monitor_path_configured": bool(monitor_path),
+            "monitor_active": monitor_active,
+            "monitor_resolved_path": current_app.config.get("NAS_MONITOR_RESOLVED_PATH"),
         }
     )
 
@@ -458,13 +462,15 @@ def update_settings():
     )
     current_app.config["NAS_MONITOR_PATH"] = nas_monitor_path
     current_app.config["NAS_ALLOW_MAPPED_DRIVE"] = allow_mapped_drive
+    observer = restart_monitor(current_app)
 
     return jsonify(
         {
             "database_path": str(current_app.config["DATABASE_PATH"]),
             "nas_monitor_path": nas_monitor_path,
             "nas_allow_mapped_drive": allow_mapped_drive,
-            "restart_required": True,
+            "monitor_active": bool(observer),
+            "restart_required": False,
         }
     )
 

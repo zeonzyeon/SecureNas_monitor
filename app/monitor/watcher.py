@@ -5,11 +5,31 @@ from app.monitor.event_handler import AccessEventHandler
 from app.nas_paths import NasPathConfigError, resolve_nas_root
 
 
+# 감시자 종료
+def stop_monitor(app):
+    observer = app.extensions.pop("nas_monitor_observer", None)
+
+    if not observer:
+        app.config["NAS_MONITOR_ACTIVE"] = False
+        return
+
+    observer.stop()
+    observer.join(timeout=5)
+    app.config["NAS_MONITOR_ACTIVE"] = False
+
+
+# 감시자 재시작
+def restart_monitor(app):
+    stop_monitor(app)
+    return start_monitor(app)
+
+
 def start_monitor(app):
     monitor_path = app.config["NAS_MONITOR_PATH"]
 
     if not monitor_path:
         app.logger.warning("NAS_MONITOR_PATH is not configured. File monitoring is disabled.")
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
 
     try:
@@ -19,16 +39,19 @@ def start_monitor(app):
         )
     except NasPathConfigError as error:
         app.logger.error("Invalid NAS_MONITOR_PATH: %s", error)
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
 
     try:
         path_exists = path.exists()
     except PermissionError:
         app.logger.warning("NAS_MONITOR_PATH access denied: %s", path)
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
 
     if not path_exists:
         app.logger.warning("NAS_MONITOR_PATH does not exist: %s", path)
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
 
     event_handler = AccessEventHandler(app)
@@ -39,10 +62,15 @@ def start_monitor(app):
         observer.start()
     except TypeError as error:
         app.logger.error("Failed to start file monitor. Try upgrading watchdog: %s", error)
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
     except Exception as error:
         app.logger.error("Failed to start file monitor: %s", error)
+        app.config["NAS_MONITOR_ACTIVE"] = False
         return None
 
+    app.extensions["nas_monitor_observer"] = observer
+    app.config["NAS_MONITOR_ACTIVE"] = True
+    app.config["NAS_MONITOR_RESOLVED_PATH"] = str(path)
     app.logger.info("Started NAS file monitor: %s", path)
     return observer

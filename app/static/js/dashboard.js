@@ -282,17 +282,18 @@ async function updateUser(userId, payload) {
 async function loadHealth() {
   const response = await fetch("/health");
   const health = await response.json();
+  const monitorReady = Boolean(health.monitor_active);
 
   setText(elements.apiState, health.status === "ok" ? "정상" : "확인 필요");
   setText(elements.databasePath, health.database);
   setText(elements.nasMonitorPath, health.nas_monitor_path || "미설정");
   setText(elements.monitorConfigured, health.monitor_path_configured ? "설정됨" : "미설정");
-  setText(elements.monitorState, health.monitor_path_configured ? "감시 준비됨" : "감시 비활성");
+  setText(elements.monitorState, monitorReady ? "감시 준비됨" : "감시 비활성");
   setText(
     elements.monitorPathState,
-    health.monitor_path_configured ? "NAS_MONITOR_PATH 설정 완료" : "NAS_MONITOR_PATH 미설정",
+    monitorReady ? "실시간 감시 연결됨" : "실시간 감시 연결 안 됨",
   );
-  elements.monitorDot?.classList.toggle("ok", health.monitor_path_configured);
+  elements.monitorDot?.classList.toggle("ok", monitorReady);
 }
 
 async function loadEvents(options = {}) {

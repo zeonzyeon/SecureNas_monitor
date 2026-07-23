@@ -1,7 +1,7 @@
 ﻿import os
 
 from app import create_app
-from app.monitor.watcher import start_monitor
+from app.monitor.watcher import start_monitor, stop_monitor
 
 
 app = create_app()
@@ -17,6 +17,4 @@ if __name__ == "__main__":
     try:
         app.run(debug=app.config["DEBUG"], reloader_type="stat")
     finally:
-        if observer:
-            observer.stop()
-            observer.join()
+        stop_monitor(app)
