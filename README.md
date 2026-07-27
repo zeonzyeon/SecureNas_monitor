@@ -60,8 +60,13 @@ SecureNas_monitor/
 │  │  │  ├─ auth.css
 │  │  │  ├─ dashboard.css
 │  │  │  └─ files.css
+│  │  ├─ img/
+│  │  │  └─ planb-nas-icon.png
 │  │  └─ js/
+│  │     ├─ auth_session.js
 │  │     ├─ dashboard.js
+│  │     ├─ files.js
+│  │     ├─ session_guard.js
 │  │     └─ settings.js
 │  └─ templates/
 │     ├─ blocked_ips.html
@@ -74,10 +79,17 @@ SecureNas_monitor/
 │     ├─ security_logs.html
 │     ├─ settings.html
 │     └─ users.html
+├─ deploy/
+│  ├─ deploy_to_pi.ps1
+│  ├─ planb-nas.service
+│  ├─ raspberry-pi.env.example
+│  └─ remote_install.sh
 ├─ .env
 ├─ .env.example
+├─ DEPLOY_RASPBERRY_PI.md
 ├─ requirements.txt
 ├─ run.py
+├─ wsgi.py
 └─ README.md
 ```
 
@@ -91,11 +103,14 @@ SecureNas_monitor/
 
 ## 역할별 권한
 
-| 역할 | 읽기 | 생성/업로드 | 다운로드 | 수정 | 삭제 | 대시보드 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 관리자 | 가능 | 가능 | 가능 | 가능 | 가능 | 가능 |
-| 사용자 | 가능 | 가능 | 가능 | 가능 | 불가 | 불가 |
-| 열람자 | 가능 | 불가 | 불가 | 불가 | 불가 | 불가 |
+| 역할 | 읽기 | 생성/업로드 | 다운로드 | 이름 변경 | 내용 수정 | 삭제 | 대시보드 |
+|------|------|-------------|----------|-----------|-----------|------|----------|
+| Admin | 가능 | 가능 | 가능 | 가능 | 불가 | 가능 | 가능 |
+| Editor | 가능 | 가능 | 가능 | 가능 | 불가 | 불가 | 가능 |
+| Viewer | 가능 | 불가 | 불가 | 불가 | 불가 | 불가 | 불가 |
+
+현재 파일 내용 직접 수정 기능은 비활성화되어 있습니다.  
+관리자와 사용자는 파일 및 폴더 이름 변경만 수행할 수 있습니다.
 
 <br>
 
@@ -168,50 +183,80 @@ SecureNas_monitor/
 
 <br>
 
+## 세션 보호
+
+
+로그인 성공 시 브라우저 세션 스토리지에 활성 세션 상태를 저장합니다.
+
+이후 보호된 페이지에 접근할 때 세션 상태가 없으면 서버 세션을 정리하고 로그인 화면으로 이동합니다.  
+이를 통해 브라우저 재진입 또는 비정상적인 세션 상태에서 보호 페이지가 그대로 노출되는 상황을 줄입니다.
+
+관련 파일:
+
+```text
+app/static/js/auth_session.js
+app/static/js/session_guard.js
+```
+<br>
+
+## 파일 관리 기능
+
+`/files` 화면에서 NAS 공유 폴더 또는 설정된 감시 폴더를 웹으로 탐색할 수 있습니다.
+
+지원 기능은 다음과 같습니다.
+
+- 파일 열기
+- 파일 및 폴더 생성
+- 파일 업로드
+- 파일 다운로드
+- 파일 및 폴더 이름 변경
+- 파일 및 폴더 삭제
+
+파일 내용 직접 수정 기능은 현재 비활성화되어 있습니다.  
+삭제는 관리자만 수행할 수 있으며, 일반 사용자는 생성, 업로드, 다운로드, 이름 변경까지만 가능합니다.
+<br>
+
 ## 주요 API
 
-관리자 전용:
+### 관리자 및 사용자
 
-```text
+```
 GET    /health
-GET    /api/settings
-PATCH  /api/settings
 GET    /api/events
 GET    /api/users
-PATCH  /api/users/<user_id>
 GET    /api/ip-blocks
+GET    /api/security-logs
+GET    /dashboard
+GET    /file-events
+GET    /security-logs
+```
+관리자 전용:
+```
+GET    /settings
+GET    /users
+GET    /blocked-ips
+GET    /api/settings
+PATCH  /api/settings
+PATCH  /api/users/<user_id>
 POST   /api/ip-blocks
 DELETE /api/ip-blocks/<ip_address>
-GET    /api/security-logs
+POST   /files/delete/<subpath>
 ```
-
 로그인 사용자:
-
-```text
+```
 GET /files
 GET /files/<subpath>
 GET /files/open/<subpath>
 ```
-
-관리자/사용자:
-
-```text
+관리자 및 사용자 파일 작업:
+```
 POST /files/create
 POST /files/upload
 GET  /files/download/<subpath>
-```
-
-관리자/사용자 파일 수정:
-
-```text
-GET  /files/edit/<subpath>
-POST /files/edit/<subpath>
-```
-
-관리자 전용 파일 작업:
-
-```text
-POST /files/delete/<subpath>
+POST /files/rename/<subpath>
+세션
+GET  /logout
+POST /session/logout
 ```
 
 <br>
@@ -225,3 +270,21 @@ POST /files/delete/<subpath>
 ```text
 사용자 → SecureNas 웹 포털 → Flask 서버 계정 → NAS 공유 폴더
 ```
+
+## 최근 업데이트 내용(2023-07-27)
+
+이번 작업을 통해 SecureNas Monitor는 단순 파일 이벤트 모니터링 도구에서 NAS 웹 접근 포털에 더 가까운 형태로 확장되었습니다.
+
+- Raspberry Pi 배포 환경 지원 추가
+- `wsgi.py` 기반 Gunicorn 실행 구조 추가
+- systemd 서비스 파일 추가
+- Tailscale을 통한 외부 접속 구성 문서 추가
+- CIFS 마운트를 통한 NAS 공유 폴더 연동 방식 정리
+- NAS 경로 설정 검증 로직 추가
+- Windows 매핑 드라이브 사용 여부 설정 추가
+- 파일 이름 변경 기능 추가
+- 파일 내용 직접 수정 기능 비활성화
+- 사용자 역할의 대시보드 접근 권한 확장
+- 파일 이벤트 중복 기록 방지 로직 개선
+- SMB 임시 파일 이벤트 필터링 추가
+- 브라우저 세션 보호용 클라이언트 스크립트 추가
