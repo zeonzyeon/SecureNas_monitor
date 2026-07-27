@@ -15,6 +15,6 @@ if __name__ == "__main__":
     observer = start_monitor(app) if should_start_monitor() else None
 
     try:
-        app.run(debug=app.config["DEBUG"], reloader_type="stat")
+        app.run(host=app.config["HOST"], port=app.config["PORT"], debug=app.config["DEBUG"], reloader_type="stat")
     finally:
         stop_monitor(app)

@@ -3,16 +3,18 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SecureNas Login</title>
+    <title>PlanB-NAS Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
   </head>
   <body>
     <main class="login-shell">
       <section class="login-panel">
         <div class="brand">
-          <div class="brand-mark">SN</div>
+          <div class="brand-mark">
+            <img src="{{ url_for('static', filename='img/planb-nas-icon.png') }}" alt="PlanB-NAS icon" onerror="this.remove()">
+          </div>
           <div>
-            <p class="brand-name">SecureNas</p>
+            <p class="brand-name">PlanB-NAS</p>
             <p class="brand-subtitle">NAS Access Portal</p>
           </div>
         </div>
@@ -28,7 +30,7 @@
           {% endif %}
         {% endwith %}
 
-        <form method="post" action="{{ url_for('auth.login_post') }}">
+        <form method="post" action="{{ url_for('auth.login_post') }}" data-login-form>
           <label for="username">아이디</label>
           <input id="username" name="username" type="text" autocomplete="username" required autofocus>
 
@@ -41,5 +43,6 @@
         <p class="auth-link">계정이 없나요? <a href="{{ url_for('auth.register') }}">계정 등록</a></p>
       </section>
     </main>
+    <script src="{{ url_for('static', filename='js/auth_session.js') }}"></script>
   </body>
 </html>

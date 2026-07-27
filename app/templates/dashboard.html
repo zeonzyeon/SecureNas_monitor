@@ -3,15 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SecureNas Monitor</title>
+    <title>PlanB-NAS Monitor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   </head>
-  <body data-page="dashboard" data-event-limit="10" data-user-limit="10" data-security-limit="10">
+  <body data-page="dashboard" data-event-limit="10" data-user-limit="10" data-security-limit="10" data-can-manage="{{ 'true' if session.role == 'admin' else 'false' }}">
     <aside class="sidebar" aria-label="Primary">
       <div class="brand">
-        <div class="brand-mark">SN</div>
+        <div class="brand-mark">
+          <img src="{{ url_for('static', filename='img/planb-nas-icon.png') }}" alt="PlanB-NAS icon" onerror="this.remove()">
+        </div>
         <div>
-          <p class="brand-name">SecureNas</p>
+          <p class="brand-name">PlanB-NAS</p>
           <p class="brand-subtitle">Access Monitor</p>
         </div>
       </div>
@@ -19,13 +21,17 @@
       <nav class="nav">
         <a class="nav-item active" href="/">Dashboard</a>
         <div class="nav-subtree" aria-label="Dashboard 하위 메뉴">
-          <a class="nav-item nav-subitem" href="{{ url_for('main.users_page') }}">Users</a>
+          {% if session.role == "admin" %}
+            <a class="nav-item nav-subitem" href="{{ url_for('main.users_page') }}">Users</a>
+          {% endif %}
           <a class="nav-item nav-subitem" href="{{ url_for('main.file_events_page') }}">File Events</a>
           <a class="nav-item nav-subitem" href="{{ url_for('main.security_logs_page') }}">Security Logs</a>
         </div>
         <a class="nav-item" href="{{ url_for('main.files') }}">Files</a>
-        <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
-        <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
+        {% if session.role == "admin" %}
+          <a class="nav-item" href="{{ url_for('main.blocked_ips_page') }}">Blocked IPs</a>
+          <a class="nav-item" href="{{ url_for('main.settings_page') }}">Settings</a>
+        {% endif %}
       </nav>
 
       <div class="sidebar-status">
@@ -81,7 +87,9 @@
             <h2>사용자 승인</h2>
             <p>최근 등록된 사용자</p>
           </div>
-          <a class="small-button secondary" href="{{ url_for('main.users_page') }}">전체보기</a>
+          {% if session.role == "admin" %}
+            <a class="small-button secondary" href="{{ url_for('main.users_page') }}">전체보기</a>
+          {% endif %}
         </div>
 
         <div class="table-wrap">
@@ -210,5 +218,6 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/session_guard.js') }}"></script>
   </body>
 </html>

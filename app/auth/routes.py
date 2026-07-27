@@ -165,3 +165,9 @@ def register_post():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+
+
+@bp.post("/session/logout")
+def session_logout():
+    session.clear()
+    return ("", 204)

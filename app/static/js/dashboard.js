@@ -5,9 +5,9 @@ const eventLabels = {
 };
 
 const roleLabels = {
-  admin: "관리자",
-  user: "사용자",
-  viewer: "열람자",
+  admin: "Admin",
+  user: "Editor",
+  viewer: "Viewer",
 };
 
 const securityEventLabels = {
@@ -53,6 +53,7 @@ const elements = {
 
 let isRefreshing = false;
 const pageMode = document.body.dataset.page || "dashboard";
+const canManage = document.body.dataset.canManage === "true";
 
 function setText(element, value) {
   if (element) {
@@ -171,24 +172,31 @@ function renderUsers(users) {
     .map((user) => {
       const statusLabel = user.is_active ? "활성" : "승인 대기";
       const statusClass = user.is_active ? "active" : "pending";
+      const roleLabel = roleLabels[user.role] || user.role;
       return `
         <tr>
           <td><strong>${escapeHtml(user.username)}</strong></td>
           <td>
-            <select class="role-select" data-user-id="${user.id}" aria-label="${escapeHtml(user.username)} 역할">
-              ${Object.entries(roleLabels)
-                .map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`)
-                .join("")}
-            </select>
+            ${
+              canManage
+                ? `<select class="role-select" data-user-id="${user.id}" aria-label="${escapeHtml(user.username)} 역할">
+                    ${Object.entries(roleLabels)
+                      .map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`)
+                      .join("")}
+                  </select>`
+                : `<span class="badge">${escapeHtml(roleLabel)}</span>`
+            }
           </td>
           <td><span class="badge ${statusClass}">${statusLabel}</span></td>
           <td>${formatDate(user.created_at)}</td>
           <td>
             <div class="row-actions">
               ${
-                user.is_active
-                  ? `<button class="small-button danger" type="button" data-action="deactivate" data-user-id="${user.id}">비활성</button>`
-                  : `<button class="small-button" type="button" data-action="approve" data-user-id="${user.id}">승인</button>`
+                canManage
+                  ? user.is_active
+                    ? `<button class="small-button danger" type="button" data-action="deactivate" data-user-id="${user.id}">비활성</button>`
+                    : `<button class="small-button" type="button" data-action="approve" data-user-id="${user.id}">승인</button>`
+                  : "-"
               }
             </div>
           </td>
@@ -284,17 +292,16 @@ async function loadHealth() {
   const response = await fetch("/health");
   const health = await response.json();
   const monitorReady = Boolean(health.monitor_active);
+  const nasPathReady = Boolean(health.nas_path_exists);
+  const pathMessage = health.nas_path_error || (monitorReady ? "실시간 감시 연결됨" : "실시간 감시 연결 안 됨");
 
   setText(elements.apiState, health.status === "ok" ? "정상" : "확인 필요");
   setText(elements.databasePath, health.database);
   setText(elements.nasMonitorPath, health.nas_monitor_path || "미설정");
   setText(elements.monitorConfigured, health.monitor_path_configured ? "설정됨" : "미설정");
-  setText(elements.monitorState, monitorReady ? "감시 준비됨" : "감시 비활성");
-  setText(
-    elements.monitorPathState,
-    monitorReady ? "실시간 감시 연결됨" : "실시간 감시 연결 안 됨",
-  );
-  elements.monitorDot?.classList.toggle("ok", monitorReady);
+  setText(elements.monitorState, monitorReady ? "감시 준비됨" : nasPathReady ? "감시 비활성" : "NAS 연결 필요");
+  setText(elements.monitorPathState, pathMessage);
+  elements.monitorDot?.classList.toggle("ok", monitorReady && nasPathReady);
 }
 
 async function loadEvents(options = {}) {

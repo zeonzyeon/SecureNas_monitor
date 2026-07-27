@@ -1,0 +1,17 @@
+[Unit]
+Description=PlanB-NAS Flask web portal
+After=network-online.target remote-fs.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/planb_media
+
+[Service]
+User=__APP_USER__
+Group=__APP_GROUP__
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=__APP_DIR__/.env
+ExecStart=__APP_DIR__/.venv/bin/gunicorn --workers 1 --worker-class gthread --threads 4 --timeout 30 --bind 0.0.0.0:__FLASK_PORT__ wsgi:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

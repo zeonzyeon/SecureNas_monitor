@@ -26,17 +26,14 @@ from app.nas_paths import NasPathConfigError, resolve_nas_root, to_portal_path
 
 bp = Blueprint("main", __name__)
 
-EDITABLE_EXTENSIONS = {".txt", ".md", ".csv", ".log", ".json", ".xml", ".html", ".css", ".js", ".py"}
-
-
 def _role_permissions(role):
     return {
         "can_read": role in {"admin", "user", "viewer"},
         "can_create": role in {"admin", "user"},
         "can_download": role in {"admin", "user"},
-        "can_edit": role in {"admin", "user"},
+        "can_rename": role in {"admin", "user"},
         "can_delete": role == "admin",
-        "can_dashboard": role == "admin",
+        "can_dashboard": role in {"admin", "user"},
     }
 
 
@@ -98,6 +95,52 @@ def _nas_root_label(root_path=None):
     return "NAS Root"
 
 
+def _path_status_error(path, missing_message, not_dir_message):
+    access_message = "NAS 경로에 접근할 권한이 없습니다. Windows에서 NAS 공유 인증을 먼저 연결하세요."
+
+    try:
+        if not path.exists():
+            try:
+                path.stat()
+            except PermissionError:
+                return access_message
+            except OSError as error:
+                return f"{missing_message} ({error})"
+
+            return missing_message
+
+        if not path.is_dir():
+            return not_dir_message
+    except PermissionError:
+        return access_message
+    except OSError as error:
+        return f"NAS 경로 확인 중 오류가 발생했습니다: {error}"
+
+    return None
+
+
+def _format_file_size(size):
+    if size is None:
+        return "-"
+
+    units = ("B", "KB", "MB", "GB", "TB")
+    value = float(size)
+
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            if unit == "B":
+                return f"{int(value)} B"
+            if value >= 100:
+                return f"{value:.0f} {unit}"
+            if value >= 10:
+                return f"{value:.1f} {unit}"
+            return f"{value:.2f} {unit}"
+
+        value /= 1024
+
+    return f"{size} B"
+
+
 def _env_path():
     return BASE_DIR / ".env"
 
@@ -146,14 +189,14 @@ def index():
     if not session.get("user_id"):
         return redirect(url_for("auth.login"))
 
-    if session.get("role") == "admin":
+    if session.get("role") in {"admin", "user"}:
         return redirect(url_for("main.dashboard"))
 
     return redirect(url_for("main.files"))
 
 
 @bp.get("/dashboard")
-@roles_required("admin")
+@roles_required("admin", "user")
 def dashboard():
     return render_template("dashboard.html")
 
@@ -171,7 +214,7 @@ def users_page():
 
 
 @bp.get("/file-events")
-@roles_required("admin")
+@roles_required("admin", "user")
 def file_events_page():
     return render_template("file_events.html")
 
@@ -183,7 +226,7 @@ def blocked_ips_page():
 
 
 @bp.get("/security-logs")
-@roles_required("admin")
+@roles_required("admin", "user")
 def security_logs_page():
     return render_template("security_logs.html")
 
@@ -214,14 +257,21 @@ def files(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
     try:
-        if not root_path.exists():
-            error = "설정된 NAS 경로가 존재하지 않습니다."
-        elif not root_path.is_dir():
-            error = "설정된 NAS 경로가 폴더가 아닙니다."
-        elif not requested_path.exists():
-            error = "요청한 폴더가 존재하지 않습니다."
-        elif not requested_path.is_dir():
-            error = "요청한 경로가 폴더가 아닙니다."
+        error = _path_status_error(
+            root_path,
+            "설정된 NAS 경로가 존재하지 않습니다.",
+            "설정된 NAS 경로가 폴더가 아닙니다.",
+        )
+
+        if not error:
+            error = _path_status_error(
+                requested_path,
+                "요청한 폴더가 존재하지 않습니다.",
+                "요청한 경로가 폴더가 아닙니다.",
+            )
+
+        if error:
+            pass
         else:
             relative_path = requested_path.relative_to(root_path)
             parts = () if str(relative_path) == "." else relative_path.parts
@@ -241,6 +291,7 @@ def files(subpath):
                         "href": child.relative_to(root_path).as_posix(),
                         "is_dir": child.is_dir(),
                         "size": stat.st_size if child.is_file() else None,
+                        "display_size": _format_file_size(stat.st_size if child.is_file() else None),
                         "updated_at": stat.st_mtime,
                     }
                 )
@@ -367,52 +418,86 @@ def delete_file_item(subpath):
     return _redirect_to_files(subpath)
 
 
-@bp.get("/files/edit/<path:subpath>")
+@bp.post("/files/rename/<path:subpath>")
 @roles_required("admin", "user")
-def edit_file(subpath):
+def rename_file_item(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
+    new_name = request.form.get("new_name", "").strip()
 
-    if not requested_path.exists() or not requested_path.is_file():
+    if not requested_path.exists():
         abort(404)
 
-    if requested_path.suffix.lower() not in EDITABLE_EXTENSIONS:
-        flash("이 파일 형식은 사이트에서 직접 수정할 수 없습니다.")
+    if not new_name or new_name in {".", ".."} or "/" in new_name or "\\" in new_name:
+        flash("파일 또는 폴더 이름을 올바르게 입력하세요.")
+        return _redirect_to_files(subpath)
+
+    target_path = (requested_path.parent / new_name).resolve()
+
+    try:
+        target_path.relative_to(root_path)
+    except ValueError:
+        abort(404)
+
+    if target_path == requested_path:
+        return _redirect_to_files(subpath)
+
+    if target_path.exists():
+        flash("이미 같은 이름의 항목이 있습니다.")
         return _redirect_to_files(subpath)
 
     try:
-        content = requested_path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        content = requested_path.read_text(encoding="cp949")
+        requested_path.rename(target_path)
+    except OSError:
+        flash("이름을 변경할 수 없습니다. 사용할 수 없는 문자가 포함되어 있는지 확인하세요.")
 
-    return render_template("edit_file.html", file_path=PurePosixPath(subpath).as_posix(), content=content)
+    return _redirect_to_files(subpath)
+
+
+@bp.get("/files/edit/<path:subpath>")
+@roles_required("admin", "user")
+def edit_file(subpath):
+    flash("파일 내용 수정은 비활성화되어 있습니다. 파일명만 변경할 수 있습니다.")
+    return _redirect_to_files(subpath)
 
 
 @bp.post("/files/edit/<path:subpath>")
 @roles_required("admin", "user")
 def edit_file_post(subpath):
-    root_path, requested_path = _safe_nas_path(subpath)
-
-    if not requested_path.exists() or not requested_path.is_file():
-        abort(404)
-
-    if requested_path.suffix.lower() not in EDITABLE_EXTENSIONS:
-        abort(400)
-
-    requested_path.write_text(request.form.get("content", ""), encoding="utf-8")
+    flash("파일 내용 수정은 비활성화되어 있습니다. 파일명만 변경할 수 있습니다.")
     return _redirect_to_files(subpath)
 
 
 @bp.get("/health")
-@roles_required("admin")
+@roles_required("admin", "user")
 def health():
     monitor_path = current_app.config["NAS_MONITOR_PATH"]
     monitor_active = bool(current_app.config.get("NAS_MONITOR_ACTIVE", False))
+    nas_path_error = None
+    nas_path_exists = False
+
+    if monitor_path:
+        try:
+            root_path = resolve_nas_root(
+                monitor_path,
+                allow_mapped_drive=current_app.config.get("NAS_ALLOW_MAPPED_DRIVE", False),
+            )
+            nas_path_error = _path_status_error(
+                root_path,
+                "설정된 NAS 경로가 존재하지 않습니다.",
+                "설정된 NAS 경로가 폴더가 아닙니다.",
+            )
+            nas_path_exists = nas_path_error is None
+        except NasPathConfigError as error:
+            nas_path_error = str(error)
+
     return jsonify(
         {
             "status": "ok",
             "database": str(current_app.config["DATABASE_PATH"]),
             "nas_monitor_path": monitor_path,
             "monitor_path_configured": bool(monitor_path),
+            "nas_path_exists": nas_path_exists,
+            "nas_path_error": nas_path_error,
             "monitor_active": monitor_active,
             "monitor_resolved_path": current_app.config.get("NAS_MONITOR_RESOLVED_PATH"),
         }
@@ -476,7 +561,7 @@ def update_settings():
 
 
 @bp.get("/api/events")
-@roles_required("admin")
+@roles_required("admin", "user")
 def events():
     limit = request.args.get("limit", default=100, type=int)
     limit = min(max(limit, 1), 500)
@@ -497,14 +582,14 @@ def events():
 
 
 @bp.get("/api/users")
-@roles_required("admin")
+@roles_required("admin", "user")
 def users():
     return jsonify(list_users())
 
 
 # IP 차단 목록 API
 @bp.get("/api/ip-blocks")
-@roles_required("admin")
+@roles_required("admin", "user")
 def ip_blocks():
     return jsonify(list_ip_blocks())
 
@@ -553,7 +638,7 @@ def delete_ip_block(ip_address):
 
 # 보안 로그 API
 @bp.get("/api/security-logs")
-@roles_required("admin")
+@roles_required("admin", "user")
 def security_logs():
     limit = request.args.get("limit", default=100, type=int)
     limit = min(max(limit, 1), 500)

@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SecureNas Files</title>
+    <title>PlanB-NAS Files</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/files.css') }}">
   </head>
   <body>
-    {% set role_labels = {"admin": "관리자", "user": "사용자", "viewer": "열람자"} %}
+    {% set role_labels = {"admin": "Admin", "user": "Editor", "viewer": "Viewer"} %}
     <main class="files-shell">
       <header class="topbar">
         <div>
@@ -105,7 +105,7 @@
                       {% endif %}
                     </td>
                     <td>{{ "폴더" if file.is_dir else "파일" }}</td>
-                    <td>{{ "-" if file.size is none else "{:,} bytes".format(file.size) }}</td>
+                    <td>{{ file.display_size }}</td>
                     <td>
                       <div class="action-row">
                         {% if not file.is_dir %}
@@ -113,9 +113,15 @@
                           {% if permissions.can_download %}
                             <a class="small-button download" href="{{ url_for('main.download_file', subpath=file.href) }}">다운로드</a>
                           {% endif %}
-                          {% if permissions.can_edit %}
-                            <a class="small-button edit" href="{{ url_for('main.edit_file', subpath=file.href) }}">수정</a>
-                          {% endif %}
+                        {% endif %}
+                        {% if permissions.can_rename %}
+                          <details class="rename-details">
+                            <summary class="small-button edit">이름변경</summary>
+                            <form class="rename-form" method="post" action="{{ url_for('main.rename_file_item', subpath=file.href) }}">
+                              <input name="new_name" value="{{ file.name }}" aria-label="새 이름">
+                              <button class="small-button save" type="submit">저장</button>
+                            </form>
+                          </details>
                         {% endif %}
                         {% if permissions.can_delete %}
                           <form method="post" action="{{ url_for('main.delete_file_item', subpath=file.href) }}">
@@ -137,5 +143,7 @@
         {% endif %}
       </section>
     </main>
+    <script src="{{ url_for('static', filename='js/files.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/session_guard.js') }}"></script>
   </body>
 </html>

@@ -12,6 +12,8 @@ load_dotenv(BASE_DIR / ".env")
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    HOST = os.getenv("FLASK_HOST", "127.0.0.1").strip()
+    PORT = int(os.getenv("FLASK_PORT", "5000"))
     DATABASE_PATH = Path(os.getenv("DATABASE_PATH", "instance/events.sqlite3"))
     NAS_MONITOR_PATH = os.getenv("NAS_MONITOR_PATH", "instance/nas_monitor_files").strip()
     NAS_ALLOW_MAPPED_DRIVE = os.getenv("NAS_ALLOW_MAPPED_DRIVE", "true").lower() == "true"
