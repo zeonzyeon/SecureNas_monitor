@@ -33,12 +33,12 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 
 run_sudo mkdir -p "$NAS_MOUNT" "$(dirname "$NAS_CREDENTIALS")"
-printf 'username=%s\npassword=%s\n' "$NAS_USERNAME" "$NAS_PASSWORD" | sudo tee "$NAS_CREDENTIALS" >/dev/null
+printf 'username=%s\npassword=%s\n' "$NAS_USERNAME" "$NAS_PASSWORD" | run_sudo tee "$NAS_CREDENTIALS" >/dev/null
 run_sudo chmod 600 "$NAS_CREDENTIALS"
 
 FSTAB_LINE="//$NAS_SERVER/$NAS_SHARE $NAS_MOUNT cifs credentials=$NAS_CREDENTIALS,iocharset=utf8,uid=$APP_USER,gid=$APP_GROUP,file_mode=0664,dir_mode=0775,nofail,_netdev 0 0"
 if ! grep -Fq "//$NAS_SERVER/$NAS_SHARE $NAS_MOUNT cifs" /etc/fstab; then
-  echo "$FSTAB_LINE" | sudo tee -a /etc/fstab >/dev/null
+  echo "$FSTAB_LINE" | run_sudo tee -a /etc/fstab >/dev/null
 fi
 
 run_sudo mount -a
@@ -101,7 +101,7 @@ sed \
   -e "s#__APP_GROUP__#$APP_GROUP#g" \
   -e "s#__APP_DIR__#$APP_DIR#g" \
   -e "s#__FLASK_PORT__#$FLASK_PORT#g" \
-  deploy/planb-nas.service | sudo tee /etc/systemd/system/planb-nas.service >/dev/null
+  deploy/planb-nas.service | run_sudo tee /etc/systemd/system/planb-nas.service >/dev/null
 run_sudo systemctl daemon-reload
 run_sudo systemctl enable --now planb-nas
 run_sudo systemctl restart planb-nas

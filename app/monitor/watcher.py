@@ -48,6 +48,10 @@ def start_monitor(app):
         app.logger.warning("NAS_MONITOR_PATH access denied: %s", path)
         app.config["NAS_MONITOR_ACTIVE"] = False
         return None
+    except OSError as error:
+        app.logger.warning("NAS_MONITOR_PATH is not reachable: %s (%s)", path, error)
+        app.config["NAS_MONITOR_ACTIVE"] = False
+        return None
 
     if not path_exists:
         app.logger.warning("NAS_MONITOR_PATH does not exist: %s", path)

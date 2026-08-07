@@ -6,9 +6,13 @@ param(
   [string]$AppDir = "/opt/planb-nas",
   [string]$NasUsername,
   [string]$NasPassword,
+  [string]$NasServer = "192.168.0.204",
+  [string]$NasShare = "PlanB_Media",
+  [string]$NasMount = "/mnt/planb_media",
   [string]$AdminPassword,
   [string]$SudoPassword,
   [string]$KeyPath,
+  [switch]$UseTailscaleProxy,
   [int]$Port = 5000
 )
 
@@ -45,6 +49,9 @@ $sshArgs = @()
 if ($KeyPath) {
   $sshArgs = @("-i", $KeyPath)
 }
+if ($UseTailscaleProxy) {
+  $sshArgs += @("-o", "ProxyCommand=tailscale nc %h %p", "-o", "StrictHostKeyChecking=accept-new")
+}
 
 if (Test-Path $archive) {
   Remove-Item -LiteralPath $archive -Force
@@ -68,6 +75,10 @@ $escapedNasPassword = $NasPassword.Replace("'", "'\''")
 $escapedAdminPassword = $AdminPassword.Replace("'", "'\''")
 $escapedSudoPassword = $SudoPassword.Replace("'", "'\''")
 
-ssh @sshArgs $remote "cd '$AppDir' && APP_USER='$PiUser' APP_GROUP='$PiUser' APP_DIR='$AppDir' NAS_USERNAME='$escapedNasUsername' NAS_PASSWORD='$escapedNasPassword' ADMIN_PASSWORD='$escapedAdminPassword' SUDO_PASSWORD='$escapedSudoPassword' FLASK_PORT='$Port' bash deploy/remote_install.sh"
+$escapedNasServer = $NasServer.Replace("'", "'\''")
+$escapedNasShare = $NasShare.Replace("'", "'\''")
+$escapedNasMount = $NasMount.Replace("'", "'\''")
+
+ssh @sshArgs $remote "cd '$AppDir' && APP_USER='$PiUser' APP_GROUP='$PiUser' APP_DIR='$AppDir' NAS_SERVER='$escapedNasServer' NAS_SHARE='$escapedNasShare' NAS_MOUNT='$escapedNasMount' NAS_USERNAME='$escapedNasUsername' NAS_PASSWORD='$escapedNasPassword' ADMIN_PASSWORD='$escapedAdminPassword' SUDO_PASSWORD='$escapedSudoPassword' FLASK_PORT='$Port' bash deploy/remote_install.sh"
 
 Remove-Item -LiteralPath $archive -Force

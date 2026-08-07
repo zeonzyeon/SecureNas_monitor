@@ -25,7 +25,8 @@ def validate_nas_monitor_path(path_value, allow_mapped_drive=False):
 # NAS 루트 경로 해석
 def resolve_nas_root(path_value, allow_mapped_drive=False):
     validate_nas_monitor_path(path_value, allow_mapped_drive=allow_mapped_drive)
-    return Path(path_value).resolve()
+    path = Path(path_value).expanduser()
+    return path if path.is_absolute() else path.absolute()
 
 
 def _to_posix_portal_path(relative_path):

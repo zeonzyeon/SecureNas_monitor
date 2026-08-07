@@ -1,4 +1,5 @@
 import shutil
+import errno
 from pathlib import Path, PurePosixPath
 
 from flask import (
@@ -15,6 +16,7 @@ from flask import (
     url_for,
 )
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import ServiceUnavailable
 
 from app.auth.decorators import login_required, roles_required
 from app.auth.models import block_ip, list_ip_blocks, list_security_logs, list_users, unblock_ip, update_user
@@ -55,7 +57,13 @@ def _nas_root_path():
 # NAS 하위 경로 검증
 def _safe_nas_path(subpath=""):
     root_path = _nas_root_path()
-    requested_path = (root_path / PurePosixPath(subpath).as_posix()).resolve()
+    portal_path = PurePosixPath(subpath)
+    parts = tuple(part for part in portal_path.parts if part not in {"", "."})
+
+    if portal_path.is_absolute() or ".." in parts:
+        abort(404)
+
+    requested_path = root_path.joinpath(*parts)
 
     try:
         requested_path.relative_to(root_path)
@@ -63,6 +71,10 @@ def _safe_nas_path(subpath=""):
         abort(404)
 
     return root_path, requested_path
+
+
+def _abort_nas_unavailable(error):
+    raise ServiceUnavailable(_format_nas_os_error(error)) from error
 
 
 # 파일 목록 리다이렉트
@@ -95,6 +107,16 @@ def _nas_root_label(root_path=None):
     return "NAS Root"
 
 
+def _format_nas_os_error(error):
+    if error.errno == errno.EHOSTDOWN:
+        return "NAS 서버에 연결할 수 없습니다. 외부 네트워크에서는 NAS VPN, Tailscale 서브넷 라우팅, 또는 CIFS 마운트 상태를 확인하세요."
+
+    if error.errno in {errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ETIMEDOUT}:
+        return "NAS 네트워크 경로에 도달할 수 없습니다. 서버 IP, VPN 연결, 방화벽, 마운트 상태를 확인하세요."
+
+    return f"NAS 경로 확인 중 오류가 발생했습니다: {error}"
+
+
 def _path_status_error(path, missing_message, not_dir_message):
     access_message = "NAS 경로에 접근할 권한이 없습니다. Windows에서 NAS 공유 인증을 먼저 연결하세요."
 
@@ -105,7 +127,7 @@ def _path_status_error(path, missing_message, not_dir_message):
             except PermissionError:
                 return access_message
             except OSError as error:
-                return f"{missing_message} ({error})"
+                return _format_nas_os_error(error)
 
             return missing_message
 
@@ -114,7 +136,7 @@ def _path_status_error(path, missing_message, not_dir_message):
     except PermissionError:
         return access_message
     except OSError as error:
-        return f"NAS 경로 확인 중 오류가 발생했습니다: {error}"
+        return _format_nas_os_error(error)
 
     return None
 
@@ -297,6 +319,8 @@ def files(subpath):
                 )
     except PermissionError:
         error = "NAS 경로에 접근할 권한이 없습니다."
+    except OSError as os_error:
+        error = _format_nas_os_error(os_error)
 
     return render_template(
         "files.html",
@@ -315,10 +339,12 @@ def files(subpath):
 def open_file(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
-    if not requested_path.exists() or not requested_path.is_file():
-        abort(404)
-
-    return send_file(requested_path, as_attachment=False)
+    try:
+        if not requested_path.exists() or not requested_path.is_file():
+            abort(404)
+        return send_file(requested_path, as_attachment=False)
+    except OSError as error:
+        _abort_nas_unavailable(error)
 
 
 @bp.get("/files/download/<path:subpath>")
@@ -326,10 +352,12 @@ def open_file(subpath):
 def download_file(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
-    if not requested_path.exists() or not requested_path.is_file():
-        abort(404)
-
-    return send_file(requested_path, as_attachment=True, download_name=requested_path.name)
+    try:
+        if not requested_path.exists() or not requested_path.is_file():
+            abort(404)
+        return send_file(requested_path, as_attachment=True, download_name=requested_path.name)
+    except OSError as error:
+        _abort_nas_unavailable(error)
 
 
 @bp.post("/files/create")
@@ -344,23 +372,31 @@ def create_file_item():
         return redirect(_files_url(current_path))
 
     root_path, current_directory = _safe_nas_path(current_path)
-    if not current_directory.exists() or not current_directory.is_dir():
-        abort(404)
+    try:
+        if not current_directory.exists() or not current_directory.is_dir():
+            abort(404)
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return redirect(_files_url(current_path))
 
-    target_path = (current_directory / name).resolve()
+    target_path = current_directory / name
     try:
         target_path.relative_to(root_path)
     except ValueError:
         abort(404)
 
-    if target_path.exists():
-        flash("이미 같은 이름의 항목이 있습니다.")
-        return redirect(_files_url(current_path))
+    try:
+        if target_path.exists():
+            flash("이미 같은 이름의 항목이 있습니다.")
+            return redirect(_files_url(current_path))
 
-    if item_type == "folder":
-        target_path.mkdir()
-    else:
-        target_path.touch()
+        if item_type == "folder":
+            target_path.mkdir()
+        else:
+            target_path.touch()
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return redirect(_files_url(current_path))
 
     return redirect(_files_url(current_path))
 
@@ -376,8 +412,12 @@ def upload_file():
         return redirect(_files_url(current_path))
 
     root_path, current_directory = _safe_nas_path(current_path)
-    if not current_directory.exists() or not current_directory.is_dir():
-        abort(404)
+    try:
+        if not current_directory.exists() or not current_directory.is_dir():
+            abort(404)
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return redirect(_files_url(current_path))
 
     filename = Path(upload.filename).name
     if not filename or "/" in filename or "\\" in filename:
@@ -387,18 +427,22 @@ def upload_file():
         flash("파일 이름을 확인할 수 없습니다.")
         return redirect(_files_url(current_path))
 
-    target_path = (current_directory / filename).resolve()
+    target_path = current_directory / filename
 
     try:
         target_path.relative_to(root_path)
     except ValueError:
         abort(404)
 
-    if target_path.exists():
-        flash("이미 같은 이름의 파일이 있습니다.")
-        return redirect(_files_url(current_path))
+    try:
+        if target_path.exists():
+            flash("이미 같은 이름의 파일이 있습니다.")
+            return redirect(_files_url(current_path))
 
-    upload.save(target_path)
+        upload.save(target_path)
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return redirect(_files_url(current_path))
     return redirect(_files_url(current_path))
 
 
@@ -407,13 +451,17 @@ def upload_file():
 def delete_file_item(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
 
-    if not requested_path.exists():
-        abort(404)
+    try:
+        if not requested_path.exists():
+            abort(404)
 
-    if requested_path.is_dir():
-        shutil.rmtree(requested_path)
-    else:
-        requested_path.unlink()
+        if requested_path.is_dir():
+            shutil.rmtree(requested_path)
+        else:
+            requested_path.unlink()
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return _redirect_to_files(subpath)
 
     return _redirect_to_files(subpath)
 
@@ -424,14 +472,18 @@ def rename_file_item(subpath):
     root_path, requested_path = _safe_nas_path(subpath)
     new_name = request.form.get("new_name", "").strip()
 
-    if not requested_path.exists():
-        abort(404)
+    try:
+        if not requested_path.exists():
+            abort(404)
+    except OSError as error:
+        flash(_format_nas_os_error(error))
+        return _redirect_to_files(subpath)
 
     if not new_name or new_name in {".", ".."} or "/" in new_name or "\\" in new_name:
         flash("파일 또는 폴더 이름을 올바르게 입력하세요.")
         return _redirect_to_files(subpath)
 
-    target_path = (requested_path.parent / new_name).resolve()
+    target_path = requested_path.parent / new_name
 
     try:
         target_path.relative_to(root_path)
@@ -441,8 +493,12 @@ def rename_file_item(subpath):
     if target_path == requested_path:
         return _redirect_to_files(subpath)
 
-    if target_path.exists():
-        flash("이미 같은 이름의 항목이 있습니다.")
+    try:
+        if target_path.exists():
+            flash("이미 같은 이름의 항목이 있습니다.")
+            return _redirect_to_files(subpath)
+    except OSError as error:
+        flash(_format_nas_os_error(error))
         return _redirect_to_files(subpath)
 
     try:
