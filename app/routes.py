@@ -360,6 +360,42 @@ def download_file(subpath):
         _abort_nas_unavailable(error)
 
 
+def _save_uploaded_file(current_path, upload):
+    if not upload or not upload.filename:
+        return False, "업로드할 파일을 선택하세요.", None
+
+    root_path, current_directory = _safe_nas_path(current_path)
+    try:
+        if not current_directory.exists() or not current_directory.is_dir():
+            abort(404)
+    except OSError as error:
+        return False, _format_nas_os_error(error), None
+
+    filename = Path(upload.filename).name
+    if not filename or "/" in filename or "\\" in filename:
+        filename = secure_filename(upload.filename)
+
+    if not filename:
+        return False, "파일 이름을 확인할 수 없습니다.", None
+
+    target_path = current_directory / filename
+
+    try:
+        target_path.relative_to(root_path)
+    except ValueError:
+        abort(404)
+
+    try:
+        if target_path.exists():
+            return False, "이미 같은 이름의 파일이 있습니다.", filename
+
+        upload.save(target_path)
+    except OSError as error:
+        return False, _format_nas_os_error(error), filename
+
+    return True, "업로드가 완료되었습니다.", filename
+
+
 @bp.post("/files/create")
 @roles_required("admin", "user")
 def create_file_item():
@@ -407,43 +443,20 @@ def upload_file():
     current_path = request.form.get("current_path", "").strip("/")
     upload = request.files.get("file")
 
-    if not upload or not upload.filename:
-        flash("업로드할 파일을 선택하세요.")
-        return redirect(_files_url(current_path))
-
-    root_path, current_directory = _safe_nas_path(current_path)
-    try:
-        if not current_directory.exists() or not current_directory.is_dir():
-            abort(404)
-    except OSError as error:
-        flash(_format_nas_os_error(error))
-        return redirect(_files_url(current_path))
-
-    filename = Path(upload.filename).name
-    if not filename or "/" in filename or "\\" in filename:
-        filename = secure_filename(upload.filename)
-
-    if not filename:
-        flash("파일 이름을 확인할 수 없습니다.")
-        return redirect(_files_url(current_path))
-
-    target_path = current_directory / filename
-
-    try:
-        target_path.relative_to(root_path)
-    except ValueError:
-        abort(404)
-
-    try:
-        if target_path.exists():
-            flash("이미 같은 이름의 파일이 있습니다.")
-            return redirect(_files_url(current_path))
-
-        upload.save(target_path)
-    except OSError as error:
-        flash(_format_nas_os_error(error))
-        return redirect(_files_url(current_path))
+    ok, message, _filename = _save_uploaded_file(current_path, upload)
+    if not ok:
+        flash(message)
     return redirect(_files_url(current_path))
+
+
+@bp.post("/api/files/upload")
+@roles_required("admin", "user")
+def upload_file_api():
+    current_path = request.form.get("current_path", "").strip("/")
+    upload = request.files.get("file")
+    ok, message, filename = _save_uploaded_file(current_path, upload)
+
+    return jsonify({"ok": ok, "message": message, "filename": filename}), 201 if ok else 400
 
 
 @bp.post("/files/delete/<path:subpath>")

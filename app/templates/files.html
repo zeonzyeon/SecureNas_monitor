@@ -59,11 +59,29 @@
             <button type="submit">생성</button>
           </form>
 
-          <form class="tool-form upload-form" method="post" action="{{ url_for('main.upload_file') }}" enctype="multipart/form-data">
+          <form
+            class="tool-form upload-form"
+            method="post"
+            action="{{ url_for('main.upload_file') }}"
+            enctype="multipart/form-data"
+            data-upload-url="{{ url_for('main.upload_file_api') }}"
+          >
             <input type="hidden" name="current_path" value="{{ current_path }}">
-            <input type="file" name="file">
+            <label class="upload-dropzone" for="uploadFiles">
+              <span class="upload-title">파일을 드래그하거나 선택</span>
+              <span class="upload-hint">여러 개 파일을 한 번에 업로드할 수 있습니다.</span>
+            </label>
+            <input id="uploadFiles" type="file" name="file" multiple>
             <button type="submit">업로드</button>
           </form>
+          <section class="upload-status" aria-live="polite" hidden>
+            <div class="upload-summary">
+              <strong id="uploadSummary">업로드 대기 중</strong>
+              <span id="uploadBytes">0 B / 0 B</span>
+            </div>
+            <progress id="uploadProgress" value="0" max="100"></progress>
+            <ul id="uploadQueue" class="upload-queue"></ul>
+          </section>
         </section>
       {% endif %}
 
