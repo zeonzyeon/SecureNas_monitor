@@ -68,6 +68,13 @@ tar `
 
 ssh @sshArgs $remote "echo '$SudoPassword' | sudo -S -p '' mkdir -p '$AppDir' && echo '$SudoPassword' | sudo -S -p '' chown -R '$($PiUser):$($PiUser)' '$AppDir'"
 scp @sshArgs $archive "${remote}:/tmp/planb-nas-deploy.tar.gz"
+if ($LASTEXITCODE -ne 0) {
+  Write-Warning "scp failed. Retrying with legacy SCP protocol (-O)."
+  scp -O @sshArgs $archive "${remote}:/tmp/planb-nas-deploy.tar.gz"
+}
+if ($LASTEXITCODE -ne 0) {
+  throw "Failed to copy deployment archive to ${remote}:/tmp/planb-nas-deploy.tar.gz"
+}
 ssh @sshArgs $remote "tar -xzf /tmp/planb-nas-deploy.tar.gz -C '$AppDir'"
 
 $escapedNasUsername = $NasUsername.Replace("'", "'\''")
