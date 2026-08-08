@@ -302,6 +302,107 @@ h1 {
   padding: 20px;
 }
 
+.storage-panel {
+  overflow: hidden;
+}
+
+.storage-status {
+  display: inline-flex;
+  min-width: 68px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #050505;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.storage-status.warning {
+  background: var(--warning);
+}
+
+.storage-visual {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.storage-ring {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#050505 var(--storage-percent, 0%), #eeeeea 0);
+}
+
+.storage-ring::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: inherit;
+  background: #ffffff;
+}
+
+.storage-ring span {
+  position: relative;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.storage-details {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.storage-bar {
+  height: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eeeeea;
+}
+
+.storage-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #050505;
+  transition: width 0.3s ease;
+}
+
+.storage-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.storage-stats div {
+  padding: 13px;
+  border-radius: 8px;
+  background: #f7f7f4;
+}
+
+.storage-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.storage-stats strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+}
+
 .inline-form {
   display: grid;
   grid-template-columns: minmax(180px, 260px) 130px 58px;
@@ -736,6 +837,15 @@ dd {
     grid-template-columns: 1fr 1fr;
   }
 
+  .storage-visual {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+
+  .storage-ring {
+    width: 112px;
+    height: 112px;
+  }
+
   .events-panel {
     grid-column: 1 / -1;
   }
@@ -755,6 +865,17 @@ dd {
   .summary-grid,
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .storage-visual,
+  .storage-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .storage-ring {
+    width: 104px;
+    height: 104px;
+    justify-self: center;
   }
 
   .inline-form {

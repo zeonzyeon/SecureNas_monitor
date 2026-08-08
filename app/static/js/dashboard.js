@@ -45,6 +45,14 @@ const elements = {
   securityLimitSelect: document.querySelector("#securityLimitSelect"),
   securityLogsEmptyState: document.querySelector("#securityLogsEmptyState"),
   securityLogsTable: document.querySelector("#securityLogsTable"),
+  storageBarFill: document.querySelector("#storageBarFill"),
+  storageFree: document.querySelector("#storageFree"),
+  storagePath: document.querySelector("#storagePath"),
+  storagePercent: document.querySelector("#storagePercent"),
+  storageRing: document.querySelector("#storageRing"),
+  storageStatus: document.querySelector("#storageStatus"),
+  storageTotal: document.querySelector("#storageTotal"),
+  storageUsed: document.querySelector("#storageUsed"),
   totalEvents: document.querySelector("#totalEvents"),
   userSaveState: document.querySelector("#userSaveState"),
   usersEmptyState: document.querySelector("#usersEmptyState"),
@@ -86,6 +94,44 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function renderStorage(storage) {
+  if (!elements.storageStatus) {
+    return;
+  }
+
+  if (!storage?.ok) {
+    setText(elements.storageStatus, "확인 필요");
+    setText(elements.storagePath, storage?.error || "저장공간 정보를 불러올 수 없습니다.");
+    setText(elements.storagePercent, "-");
+    setText(elements.storageUsed, "-");
+    setText(elements.storageFree, "-");
+    setText(elements.storageTotal, "-");
+    elements.storageStatus?.classList.add("warning");
+    if (elements.storageBarFill) {
+      elements.storageBarFill.style.width = "0%";
+    }
+    if (elements.storageRing) {
+      elements.storageRing.style.setProperty("--storage-percent", "0%");
+    }
+    return;
+  }
+
+  const percent = Math.min(Math.max(Number(storage.percent_used) || 0, 0), 100);
+
+  setText(elements.storageStatus, percent >= 90 ? "주의" : "정상");
+  setText(elements.storagePath, storage.path || "NAS 저장소");
+  setText(elements.storagePercent, `${Math.round(percent)}%`);
+  setText(elements.storageUsed, storage.display_used || "-");
+  setText(elements.storageFree, storage.display_free || "-");
+  setText(elements.storageTotal, storage.display_total || "-");
+
+  elements.storageStatus?.classList.toggle("warning", percent >= 90);
+  elements.storageRing?.style.setProperty("--storage-percent", `${percent}%`);
+  if (elements.storageBarFill) {
+    elements.storageBarFill.style.width = `${percent}%`;
+  }
 }
 
 function getFileKind(event) {
@@ -361,6 +407,14 @@ async function loadSecurityLogs() {
   return logs;
 }
 
+async function loadStorage() {
+  const response = await fetch("/api/storage");
+  const storage = await response.json();
+
+  renderStorage(storage);
+  return storage;
+}
+
 async function blockIp(ipAddress, minutes) {
   setText(elements.ipBlockSaveState, "차단 중");
 
@@ -422,6 +476,7 @@ async function refreshDashboard() {
         loadIpBlocks(),
         loadSecurityLogs(),
         loadHealth(),
+        loadStorage(),
       ]);
       updateSummary(eventSummary, users, ipBlocks);
     }

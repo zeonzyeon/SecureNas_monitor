@@ -1,5 +1,6 @@
 import shutil
 import errno
+import mimetypes
 from pathlib import Path, PurePosixPath
 
 from flask import (
@@ -27,6 +28,77 @@ from app.nas_paths import NasPathConfigError, resolve_nas_root, to_portal_path
 
 
 bp = Blueprint("main", __name__)
+
+_VIDEO_EXTENSION_BY_MIME = {
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+    "video/x-msvideo": ".avi",
+    "video/x-matroska": ".mkv",
+    "video/webm": ".webm",
+    "video/mp2t": ".ts",
+}
+
+
+def _extension_from_header(header):
+    if len(header) >= 12 and header[4:8] == b"ftyp":
+        if header[8:12] == b"qt  ":
+            return ".mov"
+        return ".mp4"
+
+    if header.startswith(b"\x1a\x45\xdf\xa3"):
+        return ".webm"
+
+    if len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"AVI ":
+        return ".avi"
+
+    if len(header) >= 377 and header[0] == 0x47 and header[188] == 0x47 and header[376] == 0x47:
+        return ".ts"
+
+    return ""
+
+
+def _infer_upload_extension(upload):
+    extension = _VIDEO_EXTENSION_BY_MIME.get((upload.mimetype or "").lower())
+    if extension:
+        return extension
+
+    guessed_extension = mimetypes.guess_extension(upload.content_type or "")
+    if guessed_extension in _VIDEO_EXTENSION_BY_MIME.values():
+        return guessed_extension
+
+    try:
+        original_position = upload.stream.tell()
+        header = upload.stream.read(512)
+        upload.stream.seek(original_position)
+    except (AttributeError, OSError):
+        return ""
+
+    return _extension_from_header(header)
+
+
+def _infer_file_extension(path):
+    guessed_type, _encoding = mimetypes.guess_type(path.name)
+    extension = _VIDEO_EXTENSION_BY_MIME.get((guessed_type or "").lower())
+    if extension:
+        return extension
+
+    try:
+        with path.open("rb") as file:
+            return _extension_from_header(file.read(512))
+    except OSError:
+        return ""
+
+
+def _download_name_for(path):
+    if path.suffix:
+        return path.name
+
+    extension = _infer_file_extension(path)
+    if not extension:
+        return path.name
+
+    return f"{path.name}{extension}"
+
 
 def _role_permissions(role):
     return {
@@ -161,6 +233,23 @@ def _format_file_size(size):
         value /= 1024
 
     return f"{size} B"
+
+
+def _storage_usage(root_path):
+    usage = shutil.disk_usage(root_path)
+    used = usage.total - usage.free
+    percent_used = round((used / usage.total) * 100, 1) if usage.total else 0
+
+    return {
+        "path": str(root_path),
+        "total": usage.total,
+        "used": used,
+        "free": usage.free,
+        "display_total": _format_file_size(usage.total),
+        "display_used": _format_file_size(used),
+        "display_free": _format_file_size(usage.free),
+        "percent_used": percent_used,
+    }
 
 
 def _env_path():
@@ -355,7 +444,7 @@ def download_file(subpath):
     try:
         if not requested_path.exists() or not requested_path.is_file():
             abort(404)
-        return send_file(requested_path, as_attachment=True, download_name=requested_path.name)
+        return send_file(requested_path, as_attachment=True, download_name=_download_name_for(requested_path))
     except OSError as error:
         _abort_nas_unavailable(error)
 
@@ -377,6 +466,11 @@ def _save_uploaded_file(current_path, upload):
 
     if not filename:
         return False, "파일 이름을 확인할 수 없습니다.", None
+
+    if not Path(filename).suffix:
+        inferred_extension = _infer_upload_extension(upload)
+        if inferred_extension:
+            filename = f"{filename}{inferred_extension}"
 
     target_path = current_directory / filename
 
@@ -571,6 +665,24 @@ def health():
             "monitor_resolved_path": current_app.config.get("NAS_MONITOR_RESOLVED_PATH"),
         }
     )
+
+
+@bp.get("/api/storage")
+@roles_required("admin", "user")
+def storage():
+    try:
+        root_path = _nas_root_path()
+        error = _path_status_error(
+            root_path,
+            "설정된 NAS 경로가 존재하지 않습니다.",
+            "설정된 NAS 경로가 폴더가 아닙니다.",
+        )
+        if error:
+            return jsonify({"ok": False, "error": error}), 503
+
+        return jsonify({"ok": True, **_storage_usage(root_path)})
+    except Exception as error:
+        return jsonify({"ok": False, "error": _format_nas_os_error(error) if isinstance(error, OSError) else str(error)}), 503
 
 
 @bp.get("/api/settings")

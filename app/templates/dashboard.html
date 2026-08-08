@@ -81,6 +81,41 @@
         </article>
       </section>
 
+      <section class="panel storage-panel" aria-label="Storage usage">
+        <div class="panel-header">
+          <div>
+            <h2>저장공간</h2>
+            <p id="storagePath">NAS 저장소 확인 중</p>
+          </div>
+          <span class="storage-status" id="storageStatus">확인 중</span>
+        </div>
+
+        <div class="storage-visual">
+          <div class="storage-ring" id="storageRing" aria-hidden="true">
+            <span id="storagePercent">0%</span>
+          </div>
+          <div class="storage-details">
+            <div class="storage-bar" aria-hidden="true">
+              <span id="storageBarFill"></span>
+            </div>
+            <div class="storage-stats">
+              <div>
+                <span>사용 중</span>
+                <strong id="storageUsed">-</strong>
+              </div>
+              <div>
+                <span>여유 공간</span>
+                <strong id="storageFree">-</strong>
+              </div>
+              <div>
+                <span>전체 용량</span>
+                <strong id="storageTotal">-</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="panel users-panel" id="usersPanel">
         <div class="panel-header">
           <div>
