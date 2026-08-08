@@ -490,6 +490,11 @@ def _save_uploaded_file(current_path, upload):
     return True, "업로드가 완료되었습니다.", filename
 
 
+def _uploaded_files_from_request():
+    uploads = request.files.getlist("file")
+    return [upload for upload in uploads if upload and upload.filename]
+
+
 @bp.post("/files/create")
 @roles_required("admin", "user")
 def create_file_item():
@@ -535,10 +540,24 @@ def create_file_item():
 @roles_required("admin", "user")
 def upload_file():
     current_path = request.form.get("current_path", "").strip("/")
-    upload = request.files.get("file")
+    uploads = _uploaded_files_from_request()
 
-    ok, message, _filename = _save_uploaded_file(current_path, upload)
-    if not ok:
+    if not uploads:
+        flash("업로드할 파일을 선택하세요.")
+        return redirect(_files_url(current_path))
+
+    saved_count = 0
+    failed_messages = []
+    for upload in uploads:
+        ok, message, _filename = _save_uploaded_file(current_path, upload)
+        if ok:
+            saved_count += 1
+        else:
+            failed_messages.append(message)
+
+    if saved_count:
+        flash(f"{saved_count}개 파일 업로드가 완료되었습니다.")
+    for message in failed_messages:
         flash(message)
     return redirect(_files_url(current_path))
 
@@ -547,7 +566,8 @@ def upload_file():
 @roles_required("admin", "user")
 def upload_file_api():
     current_path = request.form.get("current_path", "").strip("/")
-    upload = request.files.get("file")
+    uploads = _uploaded_files_from_request()
+    upload = uploads[0] if uploads else None
     ok, message, filename = _save_uploaded_file(current_path, upload)
 
     return jsonify({"ok": ok, "message": message, "filename": filename}), 201 if ok else 400

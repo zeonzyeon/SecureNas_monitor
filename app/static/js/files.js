@@ -141,7 +141,9 @@ function renderUploadQueue() {
 }
 
 function addFilesToQueue(files) {
-  Array.from(files || []).forEach((file) => {
+  const newFiles = Array.from(files || []);
+
+  newFiles.forEach((file) => {
     queuedUploads.push({
       id: uploadSequence,
       file,
@@ -154,6 +156,8 @@ function addFilesToQueue(files) {
   });
 
   renderUploadQueue();
+
+  return newFiles.length;
 }
 
 function uploadFile(item) {
@@ -273,7 +277,6 @@ uploadForm?.addEventListener("submit", (event) => {
   }
 
   event.preventDefault();
-  addFilesToQueue(uploadInput?.files);
   uploadQueuedFiles();
 });
 
@@ -292,5 +295,8 @@ uploadForm?.addEventListener("submit", (event) => {
 });
 
 uploadDropzone?.addEventListener("drop", (event) => {
-  addFilesToQueue(event.dataTransfer?.files);
+  const addedCount = addFilesToQueue(event.dataTransfer?.files);
+  if (addedCount > 0) {
+    uploadQueuedFiles();
+  }
 });
