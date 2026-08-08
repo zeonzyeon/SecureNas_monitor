@@ -116,7 +116,27 @@ function getFileKind(event) {
     return { label: "시트", className: "sheet" };
   }
 
-  if (["mp4", "mov", "avi", "mkv", "mp3", "wav", "flac"].includes(extension)) {
+  if (
+    [
+      "mp4",
+      "mov",
+      "avi",
+      "mkv",
+      "mts",
+      "m2ts",
+      "mpg",
+      "mpeg",
+      "mod",
+      "tod",
+      "ts",
+      "vob",
+      "3gp",
+      "3g2",
+      "mp3",
+      "wav",
+      "flac",
+    ].includes(extension)
+  ) {
     return { label: "미디어", className: "media" };
   }
 
